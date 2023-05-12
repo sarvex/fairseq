@@ -121,39 +121,27 @@ class DistributedVectorPool(VectorPool):
 
     def load(self, local_rank):
         hidden_states = np.load(
-            os.path.join(
-                self.out_dir,
-                "hidden_state" + str(local_rank) + ".npy"
-            )
+            os.path.join(self.out_dir, f"hidden_state{str(local_rank)}.npy")
         )
 
-        with open(
-            os.path.join(
-                self.out_dir, "video_id" + str(local_rank) + ".pkl"),
-                "rb") as fr:
+        with open(os.path.join(self.out_dir, f"video_id{str(local_rank)}.pkl"), "rb") as fr:
             video_ids = pickle.load(fr)
         return hidden_states, video_ids
 
     def save(self):
         hidden_states = np.vstack(self.hidden_states)
-        assert len(hidden_states) == len(self.video_ids), "{}, {}".format(
-            len(hidden_states),
-            len(self.video_ids)
-        )
+        assert len(hidden_states) == len(
+            self.video_ids
+        ), f"{len(hidden_states)}, {len(self.video_ids)}"
         local_rank = torch.distributed.get_rank() \
-            if torch.distributed.is_initialized() else 0
+                if torch.distributed.is_initialized() else 0
 
         np.save(
-            os.path.join(
-                self.out_dir,
-                "hidden_state" + str(local_rank) + ".npy"),
-            hidden_states)
+            os.path.join(self.out_dir, f"hidden_state{str(local_rank)}.npy"),
+            hidden_states,
+        )
 
-        with open(
-            os.path.join(
-                self.out_dir,
-                "video_id" + str(local_rank) + ".pkl"),
-                "wb") as fw:
+        with open(os.path.join(self.out_dir, f"video_id{str(local_rank)}.pkl"), "wb") as fw:
             pickle.dump(
                 self.video_ids,
                 fw,

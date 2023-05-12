@@ -33,19 +33,23 @@ def main():
     def validate(src, tgt):
         srclen = len(src.split(" ")) if src != "" else 0
         tgtlen = len(tgt.split(" ")) if tgt != "" else 0
-        if (
-            (args.minlen is not None and (srclen < args.minlen or tgtlen < args.minlen))
-            or (
-                args.maxlen is not None
-                and (srclen > args.maxlen or tgtlen > args.maxlen)
+        return (
+            (
+                args.minlen is None
+                or srclen >= args.minlen
+                and tgtlen >= args.minlen
             )
-            or (
-                args.ratio is not None
-                and (max(srclen, tgtlen) / float(min(srclen, tgtlen)) > args.ratio)
+            and (
+                args.maxlen is None
+                or srclen <= args.maxlen
+                and tgtlen <= args.maxlen
             )
-        ):
-            return False
-        return True
+            and (
+                args.ratio is None
+                or max(srclen, tgtlen) / float(min(srclen, tgtlen))
+                <= args.ratio
+            )
+        )
 
     def safe_index(toks, index, default):
         try:
@@ -53,9 +57,7 @@ def main():
         except IndexError:
             return default
 
-    with open(args.output + "." + args.srclang, "w") as src_h, open(
-        args.output + "." + args.tgtlang, "w"
-    ) as tgt_h:
+    with (open(f"{args.output}.{args.srclang}", "w") as src_h, open(f"{args.output}.{args.tgtlang}", "w") as tgt_h):
         for line in tqdm(fileinput.input(args.files)):
             if line.startswith("S-"):
                 tgt = safe_index(line.rstrip().split("\t"), 1, "")

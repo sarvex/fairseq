@@ -41,19 +41,20 @@ class LatentMultilingualTransformerModel(MultilingualTransformerModel):
     @classmethod
     def _get_module_class(cls, is_encoder, args, lang_dict, embed_tokens, langs):
         if is_encoder:
-            if safe_hasattr(args, "encoder_latent_layer") and args.encoder_latent_layer:
-                return LatentTransformerEncoder(
+            return (
+                LatentTransformerEncoder(
                     args, lang_dict, embed_tokens, num_logits=len(langs)
                 )
-            else:
-                return TransformerEncoder(args, lang_dict, embed_tokens)
+                if safe_hasattr(args, "encoder_latent_layer")
+                and args.encoder_latent_layer
+                else TransformerEncoder(args, lang_dict, embed_tokens)
+            )
+        if safe_hasattr(args, "decoder_latent_layer") and args.decoder_latent_layer:
+            return LatentTransformerDecoder(
+                args, lang_dict, embed_tokens, num_logits=len(langs)
+            )
         else:
-            if safe_hasattr(args, "decoder_latent_layer") and args.decoder_latent_layer:
-                return LatentTransformerDecoder(
-                    args, lang_dict, embed_tokens, num_logits=len(langs)
-                )
-            else:
-                return TransformerDecoder(args, lang_dict, embed_tokens)
+            return TransformerDecoder(args, lang_dict, embed_tokens)
 
 
 @register_model_architecture(

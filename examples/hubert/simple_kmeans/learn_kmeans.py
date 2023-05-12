@@ -55,20 +55,19 @@ def load_feature_shard(feat_dir, split, nshard, rank, percent):
 
     if percent < 0:
         return np.load(feat_path, mmap_mode="r")
-    else:
-        nsample = int(np.ceil(len(lengs) * percent))
-        indices = np.random.choice(len(lengs), nsample, replace=False)
-        feat = np.load(feat_path, mmap_mode="r")
-        sampled_feat = np.concatenate(
-            [feat[offsets[i]: offsets[i] + lengs[i]] for i in indices], axis=0
+    nsample = int(np.ceil(len(lengs) * percent))
+    indices = np.random.choice(len(lengs), nsample, replace=False)
+    feat = np.load(feat_path, mmap_mode="r")
+    sampled_feat = np.concatenate(
+        [feat[offsets[i]: offsets[i] + lengs[i]] for i in indices], axis=0
+    )
+    logger.info(
+        (
+            f"sampled {nsample} utterances, {len(sampled_feat)} frames "
+            f"from shard {rank}/{nshard}"
         )
-        logger.info(
-            (
-                f"sampled {nsample} utterances, {len(sampled_feat)} frames "
-                f"from shard {rank}/{nshard}"
-            )
-        )
-        return sampled_feat
+    )
+    return sampled_feat
 
 
 def load_feature(feat_dir, split, nshard, seed, percent):

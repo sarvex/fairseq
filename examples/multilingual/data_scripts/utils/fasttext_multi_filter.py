@@ -52,7 +52,7 @@ def main():
         with Pool(args.num_workers, initializer=partial(init, args.model)) as p:
             skip_cnt = 0
             for lines, preds in p.imap(pred, list(zip(*inputs)), chunksize=500):
-                if not all(a == b for a, b in zip(preds, args.langs)):
+                if any(a != b for a, b in zip(preds, args.langs)):
                     skip_cnt += 1
                     continue
                 for line, output_h in zip(lines, outputs):

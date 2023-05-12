@@ -252,9 +252,11 @@ def main(args):
                     random.uniform(
                         args.lower_bound_fw_weight, args.upper_bound_fw_weight
                     ),
-                    random.uniform(args.lower_bound_lenpen, args.upper_bound_lenpen),
+                    random.uniform(
+                        args.lower_bound_lenpen, args.upper_bound_lenpen
+                    ),
                 ]
-                for k in range(args.num_trials)
+                for _ in range(args.num_trials)
             ]
         )
 
@@ -290,7 +292,7 @@ def main(args):
     if args.results_path is not None:
         os.makedirs(args.results_path, exist_ok=True)
         output_path = os.path.join(
-            args.results_path, "generate-{}.txt".format(args.gen_subset),
+            args.results_path, f"generate-{args.gen_subset}.txt"
         )
         with open(output_path, "w", buffering=1, encoding="utf-8") as o:
             print_result(best_scores, best_hypos, o)

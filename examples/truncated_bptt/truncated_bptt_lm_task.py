@@ -60,7 +60,7 @@ class TruncatedBPTTLMTask(FairseqTask):
         paths = utils.split_paths(cfg.data)
         assert len(paths) > 0
         self.dictionary = Dictionary.load(os.path.join(paths[0], "dict.txt"))
-        logger.info("dictionary: {} types".format(len(self.dictionary)))
+        logger.info(f"dictionary: {len(self.dictionary)} types")
 
     def load_dataset(self, split, epoch=1, combine=False, **kwargs):
         """Load a given dataset split (e.g., train, valid, test)"""
@@ -77,9 +77,7 @@ class TruncatedBPTTLMTask(FairseqTask):
             split_path, self.dictionary, combine=combine
         )
         if data is None:
-            raise FileNotFoundError(
-                "Dataset not found: {} ({})".format(split, split_path)
-            )
+            raise FileNotFoundError(f"Dataset not found: {split} ({split_path})")
 
         # this is similar to ``data.view(-1).split(tokens_per_sample)``
         data = TokenBlockDataset(

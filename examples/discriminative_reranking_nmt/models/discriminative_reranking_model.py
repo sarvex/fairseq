@@ -58,13 +58,11 @@ class BaseRanker(nn.Module):
 
     def get_segment_labels(self, src_tokens):
         segment_boundary = (src_tokens == self.separator_token).long()
-        segment_labels = (
+        return (
             segment_boundary.cumsum(dim=1)
             - segment_boundary
             - (src_tokens == self.padding_idx).long()
         )
-
-        return segment_labels
 
     def get_positions(self, src_tokens, segment_labels):
         segment_positions = (

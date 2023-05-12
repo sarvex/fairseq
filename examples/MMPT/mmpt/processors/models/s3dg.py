@@ -182,8 +182,7 @@ class MaxPool3dTFPadding(th.nn.Module):
 
     def forward(self, inp):
         inp = self.pad(inp)
-        out = self.pool(inp)
-        return out
+        return self.pool(inp)
 
 
 class Sentence_Embedding(nn.Module):
@@ -209,21 +208,19 @@ class Sentence_Embedding(nn.Module):
     def _zero_pad_tensor_token(self, tensor, size):
         if len(tensor) >= size:
             return tensor[:size]
-        else:
-            zero = th.zeros(size - len(tensor)).long()
-            return th.cat((tensor, zero), dim=0)
+        zero = th.zeros(size - len(tensor)).long()
+        return th.cat((tensor, zero), dim=0)
 
     def _split_text(self, sentence):
-        w = re.findall(r"[\w']+", str(sentence))
-        return w
+        return re.findall(r"[\w']+", str(sentence))
 
     def _words_to_token(self, words):
-        words = [
-            self.word_to_token[word] for word in words if word in self.word_to_token
-        ]
-        if words:
-            we = self._zero_pad_tensor_token(th.LongTensor(words), self.max_words)
-            return we
+        if words := [
+            self.word_to_token[word]
+            for word in words
+            if word in self.word_to_token
+        ]:
+            return self._zero_pad_tensor_token(th.LongTensor(words), self.max_words)
         else:
             return th.zeros(self.max_words).long()
 

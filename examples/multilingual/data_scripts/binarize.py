@@ -82,7 +82,7 @@ def binarize_(
         "fairseq-preprocess",
         f"--source-lang {src} --target-lang {tgt}",
         f"--destdir {databin_dir}/",
-        f"--workers 8",
+        "--workers 8",
     ]
     if isinstance(spm_vocab, tuple):
         src_vocab, tgt_vocab = spm_vocab
@@ -93,22 +93,17 @@ def binarize_(
             ]
         )
     else:
-        cmds.extend(
-            [
-                f"--joined-dictionary",
-                f"--srcdict {spm_vocab}",
-            ]
-        )
+        cmds.extend(["--joined-dictionary", f"--srcdict {spm_vocab}"])
     input_options = []
     if 'train' in splits and glob.glob(f"{bpe_dir}/train.bpe*"):
         input_options.append(
             f"--trainpref {bpe_dir}/train.bpe",
-        )        
+        )
     if 'valid' in splits and glob.glob(f"{bpe_dir}/valid.bpe*"):
         input_options.append(f"--validpref {bpe_dir}/valid.bpe")
     if 'test' in splits and glob.glob(f"{bpe_dir}/test.bpe*"):
-        input_options.append(f"--testpref {bpe_dir}/test.bpe")   
-    if len(input_options) > 0:    
+        input_options.append(f"--testpref {bpe_dir}/test.bpe")
+    if input_options:    
         cmd = " ".join(cmds + input_options)
         print(cmd)
         call(cmd)
@@ -167,7 +162,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_root", default=f"{WORKDIR_ROOT}/ML50")
     parser.add_argument("--raw-folder", default='raw')
-    parser.add_argument("--bpe-folder", default='bpe')    
+    parser.add_argument("--bpe-folder", default='bpe')
     parser.add_argument("--databin-folder", default='databin')    
 
     args = parser.parse_args()
@@ -186,15 +181,15 @@ if __name__ == '__main__':
 
     directions = [os.path.split(file_path)[-1].split('.')[1] for file_path in raw_files]
 
+    prefix = ""
     for direction in directions:
-        prefix = ""
         splits = ['train', 'valid', 'test']
         try:
             shutil.rmtree(f'{BPE_DIR}/{direction}{prefix}', ignore_errors=True)
             os.mkdir(f'{BPE_DIR}/{direction}{prefix}')
             os.makedirs(DATABIN_DIR, exist_ok=True)
         except OSError as error: 
-            print(error)     
+            print(error)
         spm_model, spm_vocab = SPM_MODEL, SPM_VOCAB
         encode_spm(spm_model, direction=direction, splits=splits)
         binarize(DATABIN_DIR, direction, spm_vocab=spm_vocab, splits=splits)

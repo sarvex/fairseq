@@ -26,7 +26,7 @@ PAD_INDEX = 1
 
 
 def generate_config(overrides_kv):
-    new_dict = {key: value for key, value in DEFAULT_CONFIG.items()}
+    new_dict = dict(DEFAULT_CONFIG.items())
     for key, value in overrides_kv.items():
         new_dict[key] = value
     return new_dict
@@ -57,7 +57,7 @@ def make_sample_with_padding(longer_src=False) -> Dict[str, Any]:
 
     src_lengths = src_tokens.ne(PAD_INDEX).sum(dim=1).long()
 
-    sample = {
+    return {
         "net_input": {
             "src_tokens": src_tokens,
             "prev_output_tokens": prev_output_tokens,
@@ -65,7 +65,6 @@ def make_sample_with_padding(longer_src=False) -> Dict[str, Any]:
         },
         "target": prev_output_tokens[:, 1:],
     }
-    return sample
 
 
 def build_transformer_monotonic_attention(**extra_args: Any):
@@ -80,8 +79,7 @@ def build_transformer_monotonic_attention(**extra_args: Any):
         "attention_dropout": 0,
         "activation_dropout": 0,
         "encoder_layerdrop": 0,
-    }
-    overrides.update(extra_args)
+    } | extra_args
     # Overrides the defaults from the parser
     args = argparse.Namespace(**overrides)
     transformer_monotonic_attention.monotonic_tiny_architecture(args)

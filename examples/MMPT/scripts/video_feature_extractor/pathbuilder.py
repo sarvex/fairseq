@@ -21,8 +21,7 @@ class PathBuilder(object):
         os.makedirs(feature_dir, exist_ok=True)
         if os.path.isfile(meta_fn):
             with open(meta_fn) as fr:
-                meta = json.load(fr)
-                return meta
+                return json.load(fr)
         print("searching videos...")
 
         video_id_to_path = {}
@@ -31,7 +30,7 @@ class PathBuilder(object):
             if video_dir in supported_formats:
                 supported_formats[video_dir].load(video_dir, video_id_to_path)
             else:
-                for idx, fn in enumerate(tqdm(os.listdir(video_dir))):
+                for fn in tqdm(os.listdir(video_dir)):
                     video_fn = os.path.join(video_dir, fn)
                     if os.path.isfile(video_fn):
                         video_id = os.path.splitext(fn)[0]
@@ -39,7 +38,7 @@ class PathBuilder(object):
                     elif os.path.isdir(video_fn):
                         # shards of folders.
                         shard_dir = video_fn
-                        for idx, fn in enumerate(os.listdir(shard_dir)):
+                        for fn in os.listdir(shard_dir):
                             video_fn = os.path.join(shard_dir, fn)
                             if os.path.isfile(video_fn):
                                 video_id = os.path.splitext(fn)[0]

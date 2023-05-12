@@ -124,30 +124,19 @@ def process_predictions(
             hyp_words = post_process(hyp_pieces, args.post_process)
 
         if res_files is not None:
-            print(
-                "{} ({}-{})".format(hyp_pieces, speaker, id),
-                file=res_files["hypo.units"],
-            )
-            print(
-                "{} ({}-{})".format(hyp_words, speaker, id),
-                file=res_files["hypo.words"],
-            )
+            print(f"{hyp_pieces} ({speaker}-{id})", file=res_files["hypo.units"])
+            print(f"{hyp_words} ({speaker}-{id})", file=res_files["hypo.words"])
 
         tgt_pieces = tgt_dict.string(target_tokens)
         tgt_words = post_process(tgt_pieces, args.post_process)
 
         if res_files is not None:
-            print(
-                "{} ({}-{})".format(tgt_pieces, speaker, id),
-                file=res_files["ref.units"],
-            )
-            print(
-                "{} ({}-{})".format(tgt_words, speaker, id), file=res_files["ref.words"]
-            )
+            print(f"{tgt_pieces} ({speaker}-{id})", file=res_files["ref.units"])
+            print(f"{tgt_words} ({speaker}-{id})", file=res_files["ref.words"])
 
         if not args.quiet:
-            logger.info("HYPO:" + hyp_words)
-            logger.info("TARGET:" + tgt_words)
+            logger.info(f"HYPO:{hyp_words}")
+            logger.info(f"TARGET:{tgt_words}")
             logger.info("___________________")
 
         hyp_words = hyp_words.split()
@@ -192,9 +181,7 @@ def optimize_models(args, use_cuda, models):
 
 
 def apply_half(t):
-    if t.dtype is torch.float32:
-        return t.to(dtype=torch.half)
-    return t
+    return t.to(dtype=torch.half) if t.dtype is torch.float32 else t
 
 
 class ExistingEmissionsDecoder(object):
@@ -293,7 +280,7 @@ def main(args, task=None, model_state=None):
         generator = ExistingEmissionsDecoder(
             generator, np.load(args.load_emissions, allow_pickle=True)
         )
-        logger.info("loaded emissions from " + args.load_emissions)
+        logger.info(f"loaded emissions from {args.load_emissions}")
 
     num_sentences = 0
 

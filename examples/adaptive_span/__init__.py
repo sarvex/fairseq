@@ -16,4 +16,4 @@ for file in os.listdir(cur_dir):
         and (file.endswith(".py") or os.path.isdir(path))
     ):
         mod_name = file[: file.find(".py")] if file.endswith(".py") else file
-        module = importlib.import_module(__name__ + "." + mod_name)
+        module = importlib.import_module(f"{__name__}.{mod_name}")

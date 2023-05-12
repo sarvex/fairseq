@@ -99,26 +99,21 @@ class LaserTask(LegacyFairseqTask):
         tgt_dictionary = Dictionary.load(config["tgt_vocab"])
 
         logger.info(
-            "| src Dictionary {} : {} types".format(
-                config["src_vocab"], len(src_dictionary)
-            )
+            f'| src Dictionary {config["src_vocab"]} : {len(src_dictionary)} types'
         )
         logger.info(
-            "| tgt Dictionary {} : {} types".format(
-                config["tgt_vocab"], len(tgt_dictionary)
-            )
+            f'| tgt Dictionary {config["tgt_vocab"]} : {len(tgt_dictionary)} types'
         )
 
         return cls(args, config, src_dictionary, tgt_dictionary, num_tasks)
 
     # Experimental overriding for backtranslation
     def build_model(self, args, from_checkpoint=False):
-        model = models.build_model(args, self)
-        return model
+        return models.build_model(args, self)
 
     def dataset(self, split):
         if split not in self.datasets:
-            raise KeyError("Dataset not loaded: " + split)
+            raise KeyError(f"Dataset not loaded: {split}")
         return self.datasets[split]
 
     def load_dataset(self, split, epoch=1, **kwargs):
@@ -151,7 +146,7 @@ class LaserTask(LegacyFairseqTask):
             src_path = os.path.dirname(dataset_config["src"])
             corpus_name = src_path.split("/")[-2]
             language_pair_name = src_path.split("/")[-1]
-            pair_datasets_key = corpus_name + "-" + language_pair_name
+            pair_datasets_key = f"{corpus_name}-{language_pair_name}"
 
             logger.info(f"loading... {pair_datasets_key}")
             if "src" in dataset_config:
@@ -321,7 +316,7 @@ class LaserTask(LegacyFairseqTask):
                 required_batch_size_multiple=required_batch_size_multiple,
             )
 
-        epoch_iter = MultidatasetEpochBatchIterator(
+        return MultidatasetEpochBatchIterator(
             dataset=dataset,
             batch_sampler=batch_sampler,
             seed=seed,
@@ -330,5 +325,3 @@ class LaserTask(LegacyFairseqTask):
             num_workers=num_workers,
             epoch=epoch,
         )
-
-        return epoch_iter

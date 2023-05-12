@@ -141,10 +141,7 @@ class Data2VecTextModel(FairseqEncoderModel):
             prev_inner_dim = self.classification_heads[name].dense.out_features
             if num_classes != prev_num_classes or inner_dim != prev_inner_dim:
                 logger.warning(
-                    're-registering head "{}" with num_classes {} (prev: {}) '
-                    "and inner_dim {} (prev: {})".format(
-                        name, num_classes, prev_num_classes, inner_dim, prev_inner_dim
-                    )
+                    f're-registering head "{name}" with num_classes {num_classes} (prev: {prev_num_classes}) and inner_dim {inner_dim} (prev: {prev_inner_dim})'
                 )
         self.classification_heads[name] = RobertaClassificationHead(
             input_dim=self.cfg.transformer.encoder.embed_dim,
@@ -159,12 +156,12 @@ class Data2VecTextModel(FairseqEncoderModel):
         return {"self"}
 
     def upgrade_state_dict_named(self, state_dict, name):
-        prefix = name + "." if name != "" else ""
+        prefix = f"{name}." if name != "" else ""
 
         # rename decoder -> encoder before upgrading children modules
         for k in list(state_dict.keys()):
-            if k.startswith(prefix + "decoder"):
-                new_k = prefix + "encoder" + k[len(prefix + "decoder") :]
+            if k.startswith(f"{prefix}decoder"):
+                new_k = f'{prefix}encoder{k[len(f"{prefix}decoder"):]}'
                 state_dict[new_k] = state_dict[k]
                 del state_dict[k]
 
@@ -175,15 +172,14 @@ class Data2VecTextModel(FairseqEncoderModel):
                 state_dict[new_k] = state_dict[k]
                 del state_dict[k]
 
-            if self.encoder.regression_head is not None:
-                if ".lm_head." in k:
-                    new_k = k.replace(".lm_head.", ".regression_head.")
-                    state_dict[new_k] = state_dict[k]
-                    del state_dict[k]
-            else:
+            if self.encoder.regression_head is None:
                 if ".regression_head." in k:
                     del state_dict[k]
 
+            elif ".lm_head." in k:
+                new_k = k.replace(".lm_head.", ".regression_head.")
+                state_dict[new_k] = state_dict[k]
+                del state_dict[k]
         # upgrade children modules
         super().upgrade_state_dict_named(state_dict, name)
 
@@ -196,40 +192,35 @@ class Data2VecTextModel(FairseqEncoderModel):
         )
         keys_to_delete = []
         for k in state_dict.keys():
-            if not k.startswith(prefix + "classification_heads."):
+            if not k.startswith(f"{prefix}classification_heads."):
                 continue
 
-            head_name = k[len(prefix + "classification_heads.") :].split(".")[0]
+            head_name = k[len(f"{prefix}classification_heads."):].split(".")[0]
             num_classes = state_dict[
-                prefix + "classification_heads." + head_name + ".out_proj.weight"
+                f"{prefix}classification_heads.{head_name}.out_proj.weight"
             ].size(0)
             inner_dim = state_dict[
-                prefix + "classification_heads." + head_name + ".dense.weight"
+                f"{prefix}classification_heads.{head_name}.dense.weight"
             ].size(0)
 
             if self.cfg.load_checkpoint_heads:
                 if head_name not in current_head_names:
                     self.register_classification_head(head_name, num_classes, inner_dim)
-            else:
-                if head_name not in current_head_names:
-                    logger.warning(
-                        "deleting classification head ({}) from checkpoint "
-                        "not present in current model: {}".format(head_name, k)
-                    )
-                    keys_to_delete.append(k)
-                elif (
+            elif head_name not in current_head_names:
+                logger.warning(
+                    f"deleting classification head ({head_name}) from checkpoint not present in current model: {k}"
+                )
+                keys_to_delete.append(k)
+            elif (
                     num_classes
                     != self.classification_heads[head_name].out_proj.out_features
                     or inner_dim
                     != self.classification_heads[head_name].dense.out_features
                 ):
-                    logger.warning(
-                        "deleting classification head ({}) from checkpoint "
-                        "with different dimensions than current model: {}".format(
-                            head_name, k
-                        )
-                    )
-                    keys_to_delete.append(k)
+                logger.warning(
+                    f"deleting classification head ({head_name}) from checkpoint with different dimensions than current model: {k}"
+                )
+                keys_to_delete.append(k)
         for k in keys_to_delete:
             del state_dict[k]
 
@@ -242,13 +233,13 @@ class Data2VecTextModel(FairseqEncoderModel):
         ):
             cur_state = self.classification_heads.state_dict()
             for k, v in cur_state.items():
-                if prefix + "classification_heads." + k not in state_dict:
-                    logger.info("Overwriting " + prefix + "classification_heads." + k)
-                    state_dict[prefix + "classification_heads." + k] = v
+                if f"{prefix}classification_heads.{k}" not in state_dict:
+                    logger.info(f"Overwriting {prefix}classification_heads.{k}")
+                    state_dict[f"{prefix}classification_heads.{k}"] = v
 
             for k in list(state_dict.keys()):
-                if k.startswith(prefix + "encoder.lm_head.") or k.startswith(
-                    prefix + "encoder.emb_head."
+                if k.startswith(f"{prefix}encoder.lm_head.") or k.startswith(
+                    f"{prefix}encoder.emb_head."
                 ):
                     del state_dict[k]
 
@@ -256,11 +247,11 @@ class Data2VecTextModel(FairseqEncoderModel):
 
         if self.encoder.target_model is None:
             for k in list(state_dict.keys()):
-                if k.startswith(prefix + "encoder.target_model."):
+                if k.startswith(f"{prefix}encoder.target_model."):
                     del state_dict[k]
 
-        if (self.encoder.ema is None) and (prefix + "encoder._ema" in state_dict):
-            del state_dict[prefix + "encoder._ema"]
+        if self.encoder.ema is None and f"{prefix}encoder._ema" in state_dict:
+            del state_dict[f"{prefix}encoder._ema"]
 
     def remove_pretraining_modules(self, last_layer=None):
         self.encoder.lm_head = None
@@ -302,8 +293,7 @@ class Data2VecTextEncoder(FairseqEncoder):
         projs = []
         for i in range(self.cfg.head_layers - 1):
             next_dim = embed_dim * 2 if i == 0 else curr_dim
-            projs.append(nn.Linear(curr_dim, next_dim))
-            projs.append(nn.GELU())
+            projs.extend((nn.Linear(curr_dim, next_dim), nn.GELU()))
             curr_dim = next_dim
 
         projs.append(nn.Linear(curr_dim, embed_dim))
@@ -353,7 +343,7 @@ class Data2VecTextEncoder(FairseqEncoder):
         super().set_num_updates(num_updates)
 
         if self.ema is None and self.regression_head is not None:
-            logger.info(f"making ema teacher")
+            logger.info("making ema teacher")
             self.make_ema_teacher()
         elif self.training and self.ema is not None:
             if self.cfg.ema_decay != self.cfg.ema_end_decay:
@@ -373,12 +363,12 @@ class Data2VecTextEncoder(FairseqEncoder):
     def state_dict(self, destination=None, prefix="", keep_vars=False):
         state = super().state_dict(destination, prefix, keep_vars)
         if self.ema is not None:
-            state[prefix + "_ema"] = self.ema.fp32_params
+            state[f"{prefix}_ema"] = self.ema.fp32_params
         return state
 
     def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
         if self.ema is not None:
-            k = prefix + "_ema"
+            k = f"{prefix}_ema"
             assert k in state_dict
             self.ema.restore(state_dict[k], True)
             del state_dict[k]

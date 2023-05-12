@@ -24,16 +24,16 @@ def read_hist(f):
     return ch
 
 
-with(open("{}/{}".format(args.histograms, args.src), 'r', encoding='utf8')) as f:
+with open(f"{args.histograms}/{args.src}", 'r', encoding='utf8') as f:
     ch1 = read_hist(f)
 
-with(open("{}/{}".format(args.histograms, args.tgt), 'r', encoding='utf8')) as f:
+with open(f"{args.histograms}/{args.tgt}", 'r', encoding='utf8') as f:
     ch2 = read_hist(f)
 
-print("Accepted characters for {}: {}".format(args.src, ch1))
-print("Accepted characters for {}: {}".format(args.tgt, ch2))
+print(f"Accepted characters for {args.src}: {ch1}")
+print(f"Accepted characters for {args.tgt}: {ch2}")
 
-with open(args.src_file, 'r', encoding='utf8') as fs1, open(args.tgt_file, 'r', encoding='utf8') as fs2, open(args.src_output_file, 'w', encoding='utf8') as fos1, open(args.tgt_output_file, 'w', encoding='utf8') as fos2:
+with (open(args.src_file, 'r', encoding='utf8') as fs1, open(args.tgt_file, 'r', encoding='utf8') as fs2, open(args.src_output_file, 'w', encoding='utf8') as fos1, open(args.tgt_output_file, 'w', encoding='utf8') as fos2):
     ls1 = fs1.readline()
     ls2 = fs2.readline()
 
@@ -45,7 +45,9 @@ with open(args.src_file, 'r', encoding='utf8') as fs1, open(args.tgt_file, 'r', 
             fos1.write(ls1)
             fos2.write(ls2)
         else:
-            print("{} {} {} \n{} {} {}".format(args.src, cnt1 / len(ls1), ls1.strip(), args.tgt, cnt2 / len(ls2), ls2.strip()))
+            print(
+                f"{args.src} {cnt1 / len(ls1)} {ls1.strip()} \n{args.tgt} {cnt2 / len(ls2)} {ls2.strip()}"
+            )
 
         ls1 = fs1.readline()
         ls2 = fs2.readline()

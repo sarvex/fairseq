@@ -22,12 +22,11 @@ class Task(object):
         determine whether to load a hard-coded task or config from a generic one.
         via if a task string is available in config.
         """
-        if config.task is not None:
-            # TODO (huxu): expand the search scope.
-            task_cls = getattr(tasks, config.task)
-            return task_cls(config)
-        else:
+        if config.task is None:
             return Task(config)
+        # TODO (huxu): expand the search scope.
+        task_cls = getattr(tasks, config.task)
+        return task_cls(config)
 
     def __init__(self, config):
         self.config = config

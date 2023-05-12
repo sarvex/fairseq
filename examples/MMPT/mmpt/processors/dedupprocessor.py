@@ -57,15 +57,11 @@ class CaptionDedupProcessor(object):
 
     def single(self, video_id):
         caption = json.loads(self.data[video_id])
-        for clip_idx, (start, end, text) in enumerate(
-            zip(caption["start"], caption["end"], caption["text"])
-        ):
+        for start, end, text in zip(caption["start"], caption["end"], caption["text"]):
             print(start, end, text)
         print("@" * 100)
         caption = self._dedup(caption)
-        for clip_idx, (start, end, text) in enumerate(
-            zip(caption["start"], caption["end"], caption["text"])
-        ):
+        for start, end, text in zip(caption["start"], caption["end"], caption["text"]):
             print(start, end, text)
         print("#" * 100)
         self.save_stat(video_id, caption)
@@ -76,9 +72,7 @@ class CaptionDedupProcessor(object):
             pickle.dump(self.data, fw, pickle.HIGHEST_PROTOCOL)
 
     def save_stat(self, video_id, caption):
-        video_fn = os.path.join(
-            "data/feat/feat_how2_s3d", video_id + ".npy"
-        )
+        video_fn = os.path.join("data/feat/feat_how2_s3d", f"{video_id}.npy")
         if os.path.isfile(video_fn):
             with open(video_fn, "rb", 1) as fr:  # 24 is the buffer size. buffered
                 version = np.lib.format.read_magic(fr)

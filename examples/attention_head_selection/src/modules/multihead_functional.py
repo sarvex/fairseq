@@ -146,15 +146,6 @@ def multi_head_attention_forward(
         # allow MHA to have different embedding dimensions when separate projection weights are used
         assert key.shape[:2] == value.shape[:2], \
             f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
-    else:
-        assert key.shape == value.shape, f"key shape {key.shape} does not match value shape {value.shape}"
-
-    #
-    # compute in-projection
-    #
-    if not use_separate_proj_weight:
-        q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
-    else:
         assert q_proj_weight is not None, "use_separate_proj_weight is True but q_proj_weight is None"
         assert k_proj_weight is not None, "use_separate_proj_weight is True but k_proj_weight is None"
         assert v_proj_weight is not None, "use_separate_proj_weight is True but v_proj_weight is None"
@@ -164,6 +155,10 @@ def multi_head_attention_forward(
             b_q, b_k, b_v = in_proj_bias.chunk(3)
         q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
 
+    else:
+        assert key.shape == value.shape, f"key shape {key.shape} does not match value shape {value.shape}"
+
+        q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
     # prep attention mask
     if attn_mask is not None:
         if attn_mask.dtype == torch.uint8:
@@ -191,7 +186,11 @@ def multi_head_attention_forward(
         key_padding_mask = key_padding_mask.to(torch.bool)
 
     # add bias along batch dimension (currently second)
-    if bias_k is not None and bias_v is not None:
+    if bias_k is None or bias_v is None:
+        assert bias_k is None
+        assert bias_v is None
+
+    else:
         assert static_k is None, "bias cannot be added to static key."
         assert static_v is None, "bias cannot be added to static value."
         k = torch.cat([k, bias_k.repeat(1, bsz, 1)])
@@ -200,10 +199,6 @@ def multi_head_attention_forward(
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
             key_padding_mask = pad(key_padding_mask, (0, 1))
-    else:
-        assert bias_k is None
-        assert bias_v is None
-
     #
     # reshape q, k, v for multihead attention and make em batch first
     #
@@ -270,9 +265,8 @@ def multi_head_attention_forward(
     attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
     attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
 
-    if need_weights:
-        # average attention weights over heads
-        attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
-        return attn_output, attn_output_weights.sum(dim=1) / num_heads
-    else:
+    if not need_weights:
         return attn_output, None
+    # average attention weights over heads
+    attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
+    return attn_output, attn_output_weights.sum(dim=1) / num_heads

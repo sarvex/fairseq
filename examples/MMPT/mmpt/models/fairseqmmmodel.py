@@ -29,11 +29,7 @@ class FairseqMMModel(BaseFairseqModel):
 
         super().upgrade_state_dict_named(state_dict, name)
 
-        keys_to_delete = []
-
-        for key in state_dict:
-            if key not in self.state_dict():
-                keys_to_delete.append(key)
+        keys_to_delete = [key for key in state_dict if key not in self.state_dict()]
         for key in keys_to_delete:
             print("[INFO]", key, "not used anymore.")
             del state_dict[key]

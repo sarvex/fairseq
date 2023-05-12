@@ -34,7 +34,10 @@ class SpeechToTextHeadSelectionTask(SpeechToTextTask):
     def __init__(self, args, tgt_dict):
         super().__init__(args, tgt_dict)
         self.task_type = args.task_type
-        assert self.task_type in ["lang", "domain"], "invalid task_type: {}, should be either lang or domain".format(self.task_type)
+        assert self.task_type in [
+            "lang",
+            "domain",
+        ], f"invalid task_type: {self.task_type}, should be either lang or domain"
         self.map_task_to_id(args.train_subset)
         self.encoder_head_prior = float(args.decoder_attention_heads) / args.total_decoder_attention_heads
         self.decoder_head_prior = float(args.encoder_attention_heads) / args.total_encoder_attention_heads
@@ -44,7 +47,9 @@ class SpeechToTextHeadSelectionTask(SpeechToTextTask):
         src_lang_set, tgt_lang_set, domain_set = set(), set(), set()
         for split in train_subset.split(","):
             seq = split.split("_")
-            assert len(seq) == 4, "subset {} should be in the format of train_src_tgt_domain".format(split)
+            assert (
+                len(seq) == 4
+            ), f"subset {split} should be in the format of train_src_tgt_domain"
             _, src_lang, tgt_lang, domain = seq
             src_lang_set.add(src_lang)
             tgt_lang_set.add(tgt_lang)
@@ -55,12 +60,12 @@ class SpeechToTextHeadSelectionTask(SpeechToTextTask):
         self.src_lang_map = {src_lang: i for (i, src_lang) in enumerate(src_langs)}
         self.tgt_lang_map = {tgt_lang: i for (i, tgt_lang) in enumerate(tgt_langs)}
         self.domain_map = {domain: i for (i, domain) in enumerate(domains)}
-        if self.task_type == "lang":
-            self.encoder_tasks = len(self.src_lang_map)
-            self.decoder_tasks = len(self.tgt_lang_map)
-        elif self.task_type == "domain":
+        if self.task_type == "domain":
             self.encoder_tasks = len(self.domain_map)
             self.decoder_tasks = len(self.domain_map)
+        elif self.task_type == "lang":
+            self.encoder_tasks = len(self.src_lang_map)
+            self.decoder_tasks = len(self.tgt_lang_map)
 
     def load_dataset(self, split, epoch=1, combine=False, **kwargs):
         is_train_split = split.startswith("train")
@@ -96,8 +101,7 @@ class SpeechToTextHeadSelectionTask(SpeechToTextTask):
         mat = torch.zeros((num_tasks, bsz), device=task_ids.device)
         mat[task_ids, torch.arange(bsz)] = 1.0
         ntokens = torch.sum(sample['target'] != 1, dim=-1)
-        sample_sizes = torch.matmul(mat, ntokens.float())
-        return sample_sizes
+        return torch.matmul(mat, ntokens.float())
 
     def train_step(
         self, sample, model, criterion, optimizer, update_num, ignore_grad=False

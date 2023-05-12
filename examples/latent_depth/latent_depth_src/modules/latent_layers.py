@@ -43,8 +43,7 @@ class LayerSelect(nn.Module):
         self.layer_samples[logit_idx] = self.samples
 
     def forward(self, i):
-        sample = self.samples[i]
-        return sample
+        return self.samples[i]
 
     def _gumbel_sigmoid(
         self, logits, tau=1, hard=False, eps=1e-10, dim=-1, threshold=0.5
@@ -68,8 +67,7 @@ class LayerSelect(nn.Module):
             y_hard = torch.zeros_like(
                 logits, memory_format=torch.legacy_contiguous_format
             ).masked_fill(y_soft > threshold, 1.0)
-            ret = y_hard - y_soft.detach() + y_soft
+            return y_hard - y_soft.detach() + y_soft
         else:
             # Reparametrization trick.
-            ret = y_soft
-        return ret
+            return y_soft

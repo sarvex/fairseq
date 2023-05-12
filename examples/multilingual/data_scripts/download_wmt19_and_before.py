@@ -77,13 +77,13 @@ def download_parts_and_combine(dl_folder, urls, filename):
     return filename
 
 def download_a_url(dl_folder, url):
-    url, filename = get_downloaded_file(dl_folder, url)        
+    url, filename = get_downloaded_file(dl_folder, url)
     if os.path.exists(filename):
         print(f'{filename} has already been downloaded so skip')
         return filename
 
     print(f'downloading {url} to {filename}')
-    if isinstance(url, list) or isinstance(url, tuple):
+    if isinstance(url, (list, tuple)):
         download_parts_and_combine(dl_folder, url, filename)
     else:
         wget.download(url, filename, bar=bar_custom)
@@ -126,7 +126,7 @@ def call(cmd, debug=False):
     
 def get_extract_name(file_path):
     path = os.path.split(file_path)
-    return path[-1] + '_extract' #.split('.')[0]
+    return f'{path[-1]}_extract'
 
 def extract_file(downloaded_file, extract_folder, get_extract_name=get_extract_name, debug=False):
     extract_name = get_extract_name(downloaded_file)
@@ -174,12 +174,11 @@ def extract_all_files(
 
 def my_glob(folder):
     for p in [f'{folder}/*', f'{folder}/*/*', f'{folder}/*/*/*']:
-        for f in glob.glob(p):
-            yield f
+        yield from glob.glob(p)
 
 
 def sgm2raw(sgm, debug):
-    to_file = sgm[0:len(sgm) - len('.sgm')]
+    to_file = sgm[:len(sgm) - len('.sgm')]
     if os.path.exists(to_file):
         debug and print(f'{sgm} already converted to {to_file}; so skip')
         return to_file
@@ -188,7 +187,7 @@ def sgm2raw(sgm, debug):
     return to_file
 
 def tmx2raw(tmx, debug):
-    to_file = tmx[0:len(tmx) - len('.tmx')]
+    to_file = tmx[:len(tmx) - len('.tmx')]
     to_folder = os.path.join(*os.path.split(tmx)[:-1])
     if os.path.exists(f'{to_folder}/bitext.en'):
         debug and print(f'{tmx} already extracted to {to_file}; so skip')
@@ -204,21 +203,13 @@ TSV_REGEX = re.compile(r'.*?(\w\w)-(\w\w).tsv$')
 
 
 def cut_wikitles(wiki_file, debug):
-    # different languages have different file names: 
-    if wiki_file.endswith('wiki/fi-en/titles.fi-en'):
-        to_file1 = f'{wiki_file}.fi'
-        to_file2 = f'{wiki_file}.en'
-        BACKSLASH = '\\'
-        cmd1 = f"cat {wiki_file} | sed 's/|||/{BACKSLASH}t/g' |cut -f1 |awk '{{$1=$1}};1' > {to_file1}"
-        cmd2 = f"cat {wiki_file} | sed 's/|||/{BACKSLASH}t/g' |cut -f2 |awk '{{$1=$1}};1' > {to_file2}"  
-#     elif WMT19_WIKITITLES_REGEX.match(wiki_file):
-#         src = WMT19_WIKITITLES_REGEX.match(wiki_file).groups()[0]
-#         to_file1 = f'{wiki_file}.{src}'
-#         to_file2 = f'{wiki_file}.en'
-#         cmd1 = f"cat {wiki_file} | cut -f1 |awk '{{$1=$1}};1' > {to_file1}"
-#         cmd2 = f"cat {wiki_file} | cut -f2 |awk '{{$1=$1}};1' > {to_file2}"
-    else:
+    if not wiki_file.endswith('wiki/fi-en/titles.fi-en'):
         return None
+    to_file1 = f'{wiki_file}.fi'
+    to_file2 = f'{wiki_file}.en'
+    BACKSLASH = '\\'
+    cmd1 = f"cat {wiki_file} | sed 's/|||/{BACKSLASH}t/g' |cut -f1 |awk '{{$1=$1}};1' > {to_file1}"
+    cmd2 = f"cat {wiki_file} | sed 's/|||/{BACKSLASH}t/g' |cut -f2 |awk '{{$1=$1}};1' > {to_file2}"
     if os.path.exists(to_file1) and os.path.exists(to_file2):
         debug and print(f'{wiki_file} already processed to {to_file1} and {to_file2}; so skip')
         return wiki_file    
@@ -282,9 +273,8 @@ def match_patts(file_path, file_patterns, src, tgt, lang):
             pattern, directions = file_pattern
             if f'{src}-{tgt}' in directions and matching in file_path:
                 return True
-        else:
-            if matching in file_path:
-                return True
+        elif matching in file_path:
+            return True
     return False
 
 def extracted_glob(extracted_folder, file_patterns, src, tgt, lang):
@@ -298,6 +288,7 @@ def extracted_glob(extracted_folder, file_patterns, src, tgt, lang):
         file_pattern = re.sub(r'{tgt:(.*?)}', r'\1' if lang == tgt else '', file_pattern)
         file_pattern = file_pattern.format(**params)
         return file_pattern
+
     for file_pattern in file_patterns:
         if isinstance(file_pattern, tuple):
             file_pattern, lang_pairs = file_pattern
@@ -309,8 +300,7 @@ def extracted_glob(extracted_folder, file_patterns, src, tgt, lang):
             continue
         glob_patterns = f'{extracted_folder}/{matching_pattern}'
 #         print('glob_patterns: ', glob_patterns)
-        for f in glob.glob(glob_patterns):
-            yield f       
+        yield from glob.glob(glob_patterns)       
 
 # for debug usage
 def all_extracted_files(split, src, tgt, extracted_folders, split_urls):
@@ -337,12 +327,20 @@ def concat_files(split, src, tgt, extracted_folders, split_urls, path_patterns, 
                 url, downloaded_file = url
             if str(url) not in extracted_folders:
                 print(f'warning: {url} not in extracted files')
-            for extracted_file in set(
-                extracted_glob(
-                    extracted_folders[str(url)], path_patterns, 
-                    s_src, s_tgt, s_lang)):
-                files.append(extracted_file)
-        if len(files) == 0:
+            files.extend(
+                iter(
+                    set(
+                        extracted_glob(
+                            extracted_folders[str(url)],
+                            path_patterns,
+                            s_src,
+                            s_tgt,
+                            s_lang,
+                        )
+                    )
+                )
+            )
+        if not files:
             print('warning: ', f'No files found for split {to_file}')
             continue
         files = sorted(set(files))
@@ -494,14 +492,14 @@ def download_czang16(download_to, username=None):
     print('done with downloading czeng1.6')
 
 def download_czeng17_script(download_to, extract_folder, debug=False):
-    url = 'http://ufal.mff.cuni.cz/czeng/download.php?f=convert_czeng16_to_17.pl.zip'
     filename = f'{download_to}/convert_czeng16_to_17.pl.zip'
     extract_to = f'{extract_folder}/{get_extract_name(filename)}'
     script_path = f'{extract_to}/convert_czeng16_to_17.pl'
-    
+
     if not os.path.exists(script_path):
-        wget.download(url, filename, bar=bar_custom)  
-        extract_to = extract_file(f'{download_to}/convert_czeng16_to_17.pl.zip', extract_folder, get_extract_name=get_extract_name, debug=debug)    
+        url = 'http://ufal.mff.cuni.cz/czeng/download.php?f=convert_czeng16_to_17.pl.zip'
+        wget.download(url, filename, bar=bar_custom)
+        extract_to = extract_file(f'{download_to}/convert_czeng16_to_17.pl.zip', extract_folder, get_extract_name=get_extract_name, debug=debug)
     return script_path
 
 czeng17_script_path = ""
@@ -519,14 +517,14 @@ def convert2czeng17(file, debug):
     return file
 
 def extract_czeng17(extract_folder, debug=False):
-    url = 'http://ufal.mff.cuni.cz/czeng/download.php?f=convert_czeng16_to_17.pl.zip'
     filename = f'{download_to}/convert_czeng16_to_17.pl.zip'
     extract_to = f'{extract_folder}/{get_extract_name(filename)}'
     script_path = f'{extract_to}/convert_czeng16_to_17.pl'
-    
+
     if not os.path.exists(script_path):
-        wget.download(url, filename, bar=bar_custom)  
-        extract_to = extract_file(f'{download_to}/convert_czeng16_to_17.pl.zip', extract_folder, get_extract_name=get_extract_name, debug=debug)    
+        url = 'http://ufal.mff.cuni.cz/czeng/download.php?f=convert_czeng16_to_17.pl.zip'
+        wget.download(url, filename, bar=bar_custom)
+        extract_to = extract_file(f'{download_to}/convert_czeng16_to_17.pl.zip', extract_folder, get_extract_name=get_extract_name, debug=debug)
     return script_path
 
 #########

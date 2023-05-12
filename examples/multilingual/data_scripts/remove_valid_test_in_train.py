@@ -86,10 +86,16 @@ def count_train_in_other_set(mess_up_train):
 
 def train_size_if_remove_in_otherset(data_sizes, mess_up_train):
     counts_in_other = count_train_in_other_set(mess_up_train)
-    remain_sizes = []
-    for direction, count in counts_in_other.items():
-        remain_sizes.append((direction, data_sizes[direction] - count, data_sizes[direction], count, 100 * count / data_sizes[direction] ))
-    return remain_sizes
+    return [
+        (
+            direction,
+            data_sizes[direction] - count,
+            data_sizes[direction],
+            count,
+            100 * count / data_sizes[direction],
+        )
+        for direction, count in counts_in_other.items()
+    ]
 
 
 def remove_messed_up_sentences(raw_data, direction, mess_up_train, mess_up_train_pairs, corrected_langs):

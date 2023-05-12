@@ -279,8 +279,8 @@ class LaserTransformerDecoder(TransformerDecoder):
                 incremental_state,
                 self_attn_mask=self_attn_mask,
                 self_attn_padding_mask=self_attn_padding_mask,
-                need_attn=bool((idx == alignment_layer)),
-                need_head_weights=bool((idx == alignment_layer)),
+                need_attn=idx == alignment_layer,
+                need_head_weights=idx == alignment_layer,
             )
             inner_states.append(x)
             if layer_attn is not None and idx == alignment_layer:

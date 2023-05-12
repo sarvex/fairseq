@@ -20,12 +20,11 @@ class JobLauncher(object):
         self.yaml_file = yaml_file
         job_key = "local"
 
-        if yaml_file.endswith(".yaml"):
-            config = recursive_config(yaml_file)
-            if config.task_type is not None:
-                job_key = config.task_type.split("_")[0]
-        else:
+        if not yaml_file.endswith(".yaml"):
             raise ValueError("unknown extension of job file:", yaml_file)
+        config = recursive_config(yaml_file)
+        if config.task_type is not None:
+            job_key = config.task_type.split("_")[0]
         self.job_key = job_key
 
     def __call__(self, job_type=None, dryrun=False):
@@ -64,10 +63,10 @@ class Pipeline(object):
             for stage in job_config.run_task:
                 # each stage can have multiple tasks running in parallel.
                 if OmegaConf.is_list(stage):
-                    stage_yamls = []
-                    for task_file in stage:
-                        stage_yamls.append(
-                            os.path.join(self.project_dir, task_file))
+                    stage_yamls = [
+                        os.path.join(self.project_dir, task_file)
+                        for task_file in stage
+                    ]
                     run_yamls.append(stage_yamls)
                 else:
                     run_yamls.append(os.path.join(self.project_dir, stage))
@@ -87,8 +86,7 @@ class Pipeline(object):
     def _save_configs(self, configs_to_save: dict):
         # save
         os.makedirs(self.project_dir, exist_ok=True)
-        for config_file in configs_to_save:
-            config = configs_to_save[config_file]
+        for config_file, config in configs_to_save.items():
             print("saving", config_file)
             OmegaConf.save(config=config, f=config_file)
 
@@ -127,7 +125,7 @@ def main(args):
     # parse multiple pipelines.
     pipelines = [Pipeline(fn) for fn in args.yamls.split(",")]
 
-    for pipe_id, pipeline in enumerate(pipelines):
+    for pipeline in pipelines:
         if not hasattr(pipeline, "project_dir"):
             for job in pipeline[0]:
                 job(job_type=job_type, dryrun=args.dryrun)

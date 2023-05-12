@@ -70,8 +70,9 @@ class VectorRetriever(object):
             self.videoid_to_vectoridx = pickle.load(fr)
 
     def add(self, hidden_states, video_ids, last=False):
-        assert len(hidden_states) == len(video_ids), "{}, {}".format(
-            str(len(hidden_states)), str(len(video_ids)))
+        assert len(hidden_states) == len(
+            video_ids
+        ), f"{len(hidden_states)}, {len(video_ids)}"
         assert len(hidden_states.shape) == 2
         assert hidden_states.dtype == np.float32
 
@@ -80,7 +81,7 @@ class VectorRetriever(object):
             if video_id not in self.videoid_to_vectoridx:
                 valid_idx.append(idx)
                 self.videoid_to_vectoridx[video_id] = \
-                    len(self.videoid_to_vectoridx)
+                        len(self.videoid_to_vectoridx)
 
         hidden_states = hidden_states[valid_idx]
         if not self.db.is_trained:
@@ -156,7 +157,7 @@ class VectorRetriever(object):
                 for videoid in self.videoid_to_vectoridx
             }
             assert len(self.vectoridx_to_videoid) \
-                == len(self.videoid_to_vectoridx)
+                    == len(self.videoid_to_vectoridx)
 
         query_hidden_states = []
         vector_ids = []
@@ -174,12 +175,11 @@ class VectorRetriever(object):
         for sample_idx, sample in enumerate(index):
             # the first video_id is always the video itself.
             cands = [video_ids[sample_idx]]
-            for vector_idx in sample:
-                if vector_idx >= 0 \
-                        and vector_ids[sample_idx] != vector_idx:
-                    cands.append(
-                        self.vectoridx_to_videoid[vector_idx]
-                    )
+            cands.extend(
+                self.vectoridx_to_videoid[vector_idx]
+                for vector_idx in sample
+                if vector_idx >= 0 and vector_ids[sample_idx] != vector_idx
+            )
             outputs.append(cands)
         return outputs
 
@@ -260,7 +260,7 @@ class VectorRetrieverDM(VectorRetriever):
                 for videoid in self.videoid_to_vectoridx
             }
             assert len(self.vectoridx_to_videoid) \
-                == len(self.videoid_to_vectoridx)
+                    == len(self.videoid_to_vectoridx)
 
         query_hidden_states = []
         vector_ids = []
@@ -278,12 +278,11 @@ class VectorRetrieverDM(VectorRetriever):
         for sample_idx, sample in enumerate(index):
             # the first video_id is always the video itself.
             cands = [video_ids[sample_idx]]
-            for vector_idx in sample:
-                if vector_idx >= 0 \
-                        and vector_ids[sample_idx] != vector_idx:
-                    cands.append(
-                        self.vectoridx_to_videoid[vector_idx]
-                    )
+            cands.extend(
+                self.vectoridx_to_videoid[vector_idx]
+                for vector_idx in sample
+                if vector_idx >= 0 and vector_ids[sample_idx] != vector_idx
+            )
             outputs.append(cands)
         return outputs
 
@@ -344,8 +343,9 @@ class MMVectorRetriever(VectorRetrieverDM):
 
     def add(self, hidden_states, video_ids):
         """hidden_states is a pair `(video, text)`"""
-        assert len(hidden_states) == len(video_ids), "{}, {}".format(
-            str(len(hidden_states)), str(len(video_ids)))
+        assert len(hidden_states) == len(
+            video_ids
+        ), f"{len(hidden_states)}, {len(video_ids)}"
         assert len(hidden_states.shape) == 3
         assert len(self.video_to_videoid) == 0
 
@@ -354,7 +354,7 @@ class MMVectorRetriever(VectorRetrieverDM):
             if video_id not in self.videoid_to_vectoridx:
                 valid_idx.append(idx)
                 self.videoid_to_vectoridx[video_id] = \
-                    len(self.videoid_to_vectoridx)
+                        len(self.videoid_to_vectoridx)
 
         batch_size = hidden_states.shape[0]
         hidden_states = hidden_states[valid_idx]
@@ -400,7 +400,7 @@ class MMVectorRetriever(VectorRetrieverDM):
                 for videoid in self.videoid_to_vectoridx
             }
             assert len(self.vectoridx_to_videoid) \
-                == len(self.videoid_to_vectoridx)
+                    == len(self.videoid_to_vectoridx)
 
         src_modality = "text" if target_modality == "video" else "video"
 
@@ -418,12 +418,11 @@ class MMVectorRetriever(VectorRetrieverDM):
         _, index = self.db[target_modality].search(
             query_hidden_states, retri_factor)
         outputs = []
-        for sample_idx, sample in enumerate(index):
-            cands = []
-            for vector_idx in sample:
-                if vector_idx >= 0:
-                    cands.append(
-                        self.vectoridx_to_videoid[vector_idx]
-                    )
+        for sample in index:
+            cands = [
+                self.vectoridx_to_videoid[vector_idx]
+                for vector_idx in sample
+                if vector_idx >= 0
+            ]
             outputs.append(cands)
         return outputs

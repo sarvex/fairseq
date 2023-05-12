@@ -9,11 +9,11 @@ def filter_overpunc(len_npunc, len_sen):
     return len_npunc < 0.5*len_sen
 
 def main(args):
-    punc = punctuation + "—|–"
-    print('Processing file {}'.format(args.input))
+    punc = f"{punctuation}—|–"
+    print(f'Processing file {args.input}')
     with gzip.open(args.input, 'rt', encoding=args.encoding) as tsv:
-        with open(args.bitext + '.' + args.src_lang, 'wt', encoding=args.encoding) as fsrc:
-            with open(args.bitext + '.' + args.tgt_lang, 'wt', encoding=args.encoding) as ftgt:
+        with open(f'{args.bitext}.{args.src_lang}', 'wt', encoding=args.encoding) as fsrc:
+            with open(f'{args.bitext}.{args.tgt_lang}', 'wt', encoding=args.encoding) as ftgt:
                 line = tsv.readline()
                 fields = line.split('\t')
 

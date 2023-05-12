@@ -98,9 +98,7 @@ class MMFusion(nn.Module):
         transformer_config = AutoConfig.from_pretrained(
             config.dataset.bert_name)
         self.hidden_size = transformer_config.hidden_size
-        self.is_train = False
-        if config.dataset.train_path is not None:
-            self.is_train = True
+        self.is_train = config.dataset.train_path is not None
         # 0 means no iso; 1-12 means iso up to that layer.
         self.num_hidden_layers = transformer_config.num_hidden_layers
         self.last_iso_layer = 0
@@ -116,7 +114,7 @@ class MMFusion(nn.Module):
             self.mm_encoder = mm_encoder_cls.from_pretrained(
                 config.dataset.bert_name, config=model_config)
         elif config.model.video_encoder_cls is not None\
-                and config.model.text_encoder_cls is not None:
+                    and config.model.text_encoder_cls is not None:
             video_encoder_cls = getattr(transformermodel, config.model.video_encoder_cls)
             model_config = AutoConfig.from_pretrained(config.dataset.bert_name)
             model_config.max_video_len = config.dataset.max_video_len
@@ -178,36 +176,30 @@ class MMFusion(nn.Module):
         return attention_mask, token_type_ids
 
     def _mm_attention_mask(self, cmasks, vmasks):
-        assert cmasks.size(0) == vmasks.size(0), "{}, {}, {}, {}".format(
-            str(cmasks.size()),
-            str(vmasks.size()),
-            str(cmasks.size(0)),
-            str(vmasks.size(0)),
-        )
+        assert cmasks.size(0) == vmasks.size(
+            0
+        ), f"{str(cmasks.size())}, {str(vmasks.size())}, {str(cmasks.size(0))}, {str(vmasks.size(0))}"
 
         mm_mask = torch.cat([cmasks[:, :1], vmasks, cmasks[:, 1:]], dim=1)
         if self.last_iso_layer == 0:
             # hard attention mask.
             return mm_mask
-        else:
-            # a gpu iso mask; 0 : num_iso_layer is isolated;
-            # num_iso_layer: are MM-fused.
-            # make an iso layer
-            batch_size = cmasks.size(0)
-            iso_mask = self._make_iso_mask(batch_size, cmasks, vmasks)
-            mm_mask = mm_mask[:, None, :].repeat(1, mm_mask.size(-1), 1)
-            iso_mm_masks = []
-            # hard attention mask.
-            iso_mask = iso_mask[:, None, :, :].repeat(
-                1, self.last_iso_layer, 1, 1)
-            iso_mm_masks.append(iso_mask)
-            if self.last_iso_layer < self.num_hidden_layers:
-                mm_mask = mm_mask[:, None, :, :].repeat(
-                    1, self.num_hidden_layers - self.last_iso_layer, 1, 1
-                )
-                iso_mm_masks.append(mm_mask)
-            iso_mm_masks = torch.cat(iso_mm_masks, dim=1)
-            return iso_mm_masks
+        # a gpu iso mask; 0 : num_iso_layer is isolated;
+        # num_iso_layer: are MM-fused.
+        # make an iso layer
+        batch_size = cmasks.size(0)
+        iso_mask = self._make_iso_mask(batch_size, cmasks, vmasks)
+        mm_mask = mm_mask[:, None, :].repeat(1, mm_mask.size(-1), 1)
+        # hard attention mask.
+        iso_mask = iso_mask[:, None, :, :].repeat(
+            1, self.last_iso_layer, 1, 1)
+        iso_mm_masks = [iso_mask]
+        if self.last_iso_layer < self.num_hidden_layers:
+            mm_mask = mm_mask[:, None, :, :].repeat(
+                1, self.num_hidden_layers - self.last_iso_layer, 1, 1
+            )
+            iso_mm_masks.append(mm_mask)
+        return torch.cat(iso_mm_masks, dim=1)
 
     def _make_iso_mask(self, batch_size, cmasks, vmasks):
         cls_self_mask = torch.cat(
@@ -307,7 +299,7 @@ class MMFusionMFMMLM(MMFusion):
         text_label=None,
         **kwargs
     ):
-        output_hidden_states = False if self.is_train else True
+        output_hidden_states = not self.is_train
 
         target_vfeats, non_masked_frame_mask = None, None
         if video_label is not None:
@@ -444,13 +436,11 @@ class MMFusionShare(MMFusion):
         assert video_outputs.size(1) == video_attention_mask.size(1)
 
         video_attention_mask = video_attention_mask.type(video_outputs.dtype) \
-            / video_attention_mask.sum(1, keepdim=True)
+                / video_attention_mask.sum(1, keepdim=True)
 
-        pooled_video = torch.bmm(
-            video_outputs.transpose(2, 1),
-            video_attention_mask.unsqueeze(2)
+        return torch.bmm(
+            video_outputs.transpose(2, 1), video_attention_mask.unsqueeze(2)
         ).squeeze(-1)
-        return pooled_video  # video_outputs
 
     def forward_text(
         self,
@@ -502,13 +492,11 @@ class MMFusionShare(MMFusion):
         assert text_outputs.size(1) == text_attention_mask.size(1)
 
         text_attention_mask = text_attention_mask.type(text_outputs.dtype) \
-            / text_attention_mask.sum(1, keepdim=True)
+                / text_attention_mask.sum(1, keepdim=True)
 
-        pooled_text = torch.bmm(
-            text_outputs.transpose(2, 1),
-            text_attention_mask.unsqueeze(2)
+        return torch.bmm(
+            text_outputs.transpose(2, 1), text_attention_mask.unsqueeze(2)
         ).squeeze(-1)
-        return pooled_text  # text_outputs
 
 
 class MMFusionSeparate(MMFusionShare):
@@ -561,13 +549,11 @@ class MMFusionSeparate(MMFusionShare):
         assert video_outputs.size(1) == video_attention_mask.size(1)
 
         video_attention_mask = video_attention_mask.type(video_outputs.dtype) \
-            / video_attention_mask.sum(1, keepdim=True)
+                / video_attention_mask.sum(1, keepdim=True)
 
-        pooled_video = torch.bmm(
-            video_outputs.transpose(2, 1),
-            video_attention_mask.unsqueeze(2)
+        return torch.bmm(
+            video_outputs.transpose(2, 1), video_attention_mask.unsqueeze(2)
         ).squeeze(-1)
-        return pooled_video  # video_outputs
 
     def forward_text(
         self,
@@ -612,13 +598,11 @@ class MMFusionSeparate(MMFusionShare):
         assert text_outputs.size(1) == text_attention_mask.size(1)
 
         text_attention_mask = text_attention_mask.type(text_outputs.dtype) \
-            / text_attention_mask.sum(1, keepdim=True)
+                / text_attention_mask.sum(1, keepdim=True)
 
-        pooled_text = torch.bmm(
-            text_outputs.transpose(2, 1),
-            text_attention_mask.unsqueeze(2)
+        return torch.bmm(
+            text_outputs.transpose(2, 1), text_attention_mask.unsqueeze(2)
         ).squeeze(-1)
-        return pooled_text  # text_outputs
 
 
 class MMFusionJoint(MMFusion):

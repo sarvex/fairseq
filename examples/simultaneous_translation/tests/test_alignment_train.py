@@ -41,9 +41,7 @@ class AlignmentTrainTest(TestCase):
 
             previous_alpha.append(alpha_i.unsqueeze(1))
 
-        # alpha: bsz * num_heads, tgt_len, src_len
-        alpha = torch.cat(previous_alpha[1:], dim=1)
-        return alpha
+        return torch.cat(previous_alpha[1:], dim=1)
 
     def _test_custom_alignment_train_impl(self, p_choose, alpha, eps):
         if p_choose.is_cuda:

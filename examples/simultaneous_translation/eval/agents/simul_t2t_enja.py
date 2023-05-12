@@ -41,20 +41,16 @@ class SimulTransTextAgentJA(TextAgent):
         self.eos = DEFAULT_EOS
 
     def initialize_states(self, states):
-        states.incremental_states = dict()
-        states.incremental_states["online"] = dict()
+        states.incremental_states = {"online": {}}
 
     def to_device(self, tensor):
-        if self.gpu:
-            return tensor.cuda()
-        else:
-            return tensor.cpu()
+        return tensor.cuda() if self.gpu else tensor.cpu()
 
     def load_model_vocab(self, args):
 
         filename = args.model_path
         if not os.path.exists(filename):
-            raise IOError("Model file not found: {}".format(filename))
+            raise IOError(f"Model file not found: {filename}")
 
         state = checkpoint_utils.load_checkpoint_to_cpu(filename)
 
@@ -76,9 +72,7 @@ class SimulTransTextAgentJA(TextAgent):
             self.model.cuda()
 
         # Set dictionary
-        self.dict = {}
-        self.dict["tgt"] = task.target_dictionary
-        self.dict["src"] = task.source_dictionary
+        self.dict = {"tgt": task.target_dictionary, "src": task.source_dictionary}
 
     @staticmethod
     def add_args(parser):
@@ -104,8 +98,7 @@ class SimulTransTextAgentJA(TextAgent):
         self.spm = {}
         for lang in ['src', 'tgt']:
             if getattr(args, f'{lang}_splitter_type', None):
-                path = getattr(args, f'{lang}_splitter_path', None)
-                if path:
+                if path := getattr(args, f'{lang}_splitter_path', None):
                     self.spm[lang] = spm.SentencePieceProcessor()
                     self.spm[lang].Load(path)
 
@@ -159,10 +152,7 @@ class SimulTransTextAgentJA(TextAgent):
 
         if BOS_PREFIX == token:
             return None
-        if token[0] == BOS_PREFIX:
-            return token[1:]
-        else:
-            return token
+        return token[1:] if token[0] == BOS_PREFIX else token
 
     def policy(self, states):
 
@@ -203,10 +193,7 @@ class SimulTransTextAgentJA(TextAgent):
 
         torch.cuda.empty_cache()
 
-        if outputs.action == 0:
-            return READ_ACTION
-        else:
-            return WRITE_ACTION
+        return READ_ACTION if outputs.action == 0 else WRITE_ACTION
 
     def predict(self, states):
         # Predict target token from decoder states
@@ -218,9 +205,8 @@ class SimulTransTextAgentJA(TextAgent):
 
         index = lprobs.argmax(dim=-1)[0, 0].item()
 
-        if index != self.dict['tgt'].eos_index:
-            token = self.dict['tgt'].string([index])
-        else:
-            token = self.dict['tgt'].eos_word
-
-        return token
+        return (
+            self.dict['tgt'].string([index])
+            if index != self.dict['tgt'].eos_index
+            else self.dict['tgt'].eos_word
+        )

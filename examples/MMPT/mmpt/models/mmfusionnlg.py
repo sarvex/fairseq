@@ -97,7 +97,7 @@ class MMFusionNLG(MMFusion):
         attention_mask, token_type_ids = self._mm_on_the_fly(
             cmasks, vmasks, attention_mask)
 
-        output = self.mm_encoder.generate(
+        return self.mm_encoder.generate(
             input_ids=caps,
             input_video_embeds=vfeats,
             attention_mask=attention_mask,
@@ -107,7 +107,6 @@ class MMFusionNLG(MMFusion):
             max_length=self.max_length,
             **self.gen_param
         )
-        return output
 
 
 class MMBertForNLG(BertPreTrainedModel):
@@ -175,11 +174,7 @@ class MMBertForNLG(BertPreTrainedModel):
             prediction_scores = self.cls(selected_text_output)
 
         if not return_dict:
-            output = (
-                prediction_scores,
-            ) + outputs[2:]
-            return output
-
+            return (prediction_scores,) + outputs[2:]
         # for generation.
         text_offset = input_video_embeds.size(1) + 2  # [CLS]
         text_sequence_output = sequence_output[:, text_offset:]

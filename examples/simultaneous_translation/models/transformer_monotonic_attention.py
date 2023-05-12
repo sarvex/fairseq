@@ -70,7 +70,7 @@ class TransformerMonotonicEncoder(TransformerEncoder):
         self.layers.extend(
             [
                 TransformerMonotonicEncoderLayer(args)
-                for i in range(args.encoder_layers)
+                for _ in range(args.encoder_layers)
             ]
         )
 

@@ -25,7 +25,7 @@ def replace_oovs(source_in, target_in, vocabulary, source_out, target_out):
         source_seq_out = []
         target_seq_out = []
 
-        word_to_pos = dict()
+        word_to_pos = {}
         for position, token in enumerate(source_seq.strip().split()):
             if token in vocabulary:
                 token_out = token
@@ -41,10 +41,7 @@ def replace_oovs(source_in, target_in, vocabulary, source_out, target_out):
 
         if target_seq is not None:
             for token in target_seq.strip().split():
-                if token in word_to_pos:
-                    token_out = format_unk(word_to_pos[token])
-                else:
-                    token_out = token
+                token_out = format_unk(word_to_pos[token]) if token in word_to_pos else token
                 target_seq_out.append(token_out)
         if target_out is not None:
             target_out.write(" ".join(target_seq_out) + "\n")

@@ -17,16 +17,19 @@ def read_text_file(filename):
 
 def get_bleu(in_sent, target_sent):
     bleu = sacrebleu.corpus_bleu([in_sent], [[target_sent]])
-    out = " ".join(
-        map(str, [bleu.score, bleu.sys_len, bleu.ref_len] + bleu.counts + bleu.totals)
+    return " ".join(
+        map(
+            str,
+            [bleu.score, bleu.sys_len, bleu.ref_len]
+            + bleu.counts
+            + bleu.totals,
+        )
     )
-    return out
 
 
 def get_ter(in_sent, target_sent):
     ter = sacrebleu.corpus_ter([in_sent], [[target_sent]])
-    out = " ".join(map(str, [ter.score, ter.num_edits, ter.ref_length]))
-    return out
+    return " ".join(map(str, [ter.score, ter.num_edits, ter.ref_length]))
 
 
 def init(sp_model):

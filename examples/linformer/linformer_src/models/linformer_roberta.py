@@ -80,7 +80,7 @@ class LinformerEncoder(RobertaEncoder):
 
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
-        prefix = name + "." if name != "" else ""
+        prefix = f"{name}." if name != "" else ""
 
         # some old checkpoints had weight sharing implemented incorrectly
         # (note: this was correct in the original paper code)

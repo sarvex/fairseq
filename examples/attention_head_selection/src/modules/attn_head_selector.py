@@ -37,8 +37,7 @@ class AttnHeadSelector(nn.Module):
         gumbels1 = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
         gumbels2 = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
         gumbels1 = (logits + gumbels1 - gumbels2) / tau
-        y_soft = gumbels1.sigmoid()
-        return y_soft
+        return gumbels1.sigmoid()
 
     def subset_select(self, y_soft, topk, dim=-1):
         top_values, top_inds = torch.topk(y_soft, k=topk, dim=dim)
@@ -69,7 +68,7 @@ class AttnHeadSelector(nn.Module):
                 topk=self.num_heads,
             )
         else:
-            raise ValueError("{} is not supported".format(self.select_strategy))
+            raise ValueError(f"{self.select_strategy} is not supported")
 
         self.batch_subset = self.subset_heads[task_ids, :, :]
         self.batch_weights = self.subset_weights[task_ids, :, :]

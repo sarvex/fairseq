@@ -167,7 +167,7 @@ class Data2VecAudioModel(BaseFairseqModel):
         super().set_num_updates(num_updates)
 
         if self.ema is None and self.final_proj is not None:
-            logger.info(f"making ema teacher")
+            logger.info("making ema teacher")
             self.make_ema_teacher()
         elif self.training and self.ema is not None:
             if self.cfg.ema_decay != self.cfg.ema_end_decay:
@@ -190,13 +190,13 @@ class Data2VecAudioModel(BaseFairseqModel):
         state = super().state_dict(destination, prefix, keep_vars)
 
         if self.ema is not None:
-            state[prefix + "_ema"] = self.ema.fp32_params
+            state[f"{prefix}_ema"] = self.ema.fp32_params
 
         return state
 
     def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
         if self.ema is not None:
-            k = prefix + "_ema"
+            k = f"{prefix}_ema"
             assert k in state_dict
             self.ema.restore(state_dict[k], True)
             del state_dict[k]
@@ -465,11 +465,7 @@ class Data2VecAudioModel(BaseFairseqModel):
                 x.float(), y.float(), reduction="none", beta=self.loss_beta
             ).sum(dim=-1)
 
-        if self.loss_scale is not None:
-            scale = self.loss_scale
-        else:
-            scale = 1 / math.sqrt(sz)
-
+        scale = self.loss_scale if self.loss_scale is not None else 1 / math.sqrt(sz)
         result["losses"]["regression"] = loss.sum() * scale
 
         if "sample_size" not in result:
@@ -502,31 +498,29 @@ class Data2VecAudioModel(BaseFairseqModel):
     @staticmethod
     def compute_var(y):
         y = y.view(-1, y.size(-1))
-        if dist.is_initialized():
-            zc = torch.tensor(y.size(0)).cuda()
-            zs = y.sum(dim=0)
-            zss = (y ** 2).sum(dim=0)
-
-            dist.all_reduce(zc)
-            dist.all_reduce(zs)
-            dist.all_reduce(zss)
-
-            var = zss / (zc - 1) - (zs ** 2) / (zc * (zc - 1))
-            return torch.sqrt(var + 1e-6).mean()
-        else:
+        if not dist.is_initialized():
             return torch.sqrt(y.var(dim=0) + 1e-6).mean()
+        zc = torch.tensor(y.size(0)).cuda()
+        zs = y.sum(dim=0)
+        zss = (y ** 2).sum(dim=0)
+
+        dist.all_reduce(zc)
+        dist.all_reduce(zs)
+        dist.all_reduce(zss)
+
+        var = zss / (zc - 1) - (zs ** 2) / (zc * (zc - 1))
+        return torch.sqrt(var + 1e-6).mean()
 
     def extract_features(
         self, source, padding_mask, mask=False, layer=None
     ):
-        res = self.forward(
+        return self.forward(
             source,
             padding_mask,
             mask=mask,
             features_only=True,
             layer=layer,
         )
-        return res
 
     def remove_pretraining_modules(self, last_layer=None):
         self.final_proj = None

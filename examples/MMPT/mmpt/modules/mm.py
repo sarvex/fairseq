@@ -141,5 +141,4 @@ class AlignHead(nn.Module):
         self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
     def forward(self, dropout_pooled_output):
-        logits = self.seq_relationship(dropout_pooled_output)
-        return logits
+        return self.seq_relationship(dropout_pooled_output)

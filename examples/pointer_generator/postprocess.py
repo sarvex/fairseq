@@ -35,9 +35,8 @@ def replace_oovs(source_in, target_in, target_out):
 
         pos_to_word = source_seq.strip().split()
         for token in target_seq.strip().split():
-            m = oov_re.match(token)
-            if m:
-                pos = int(m.group(1))
+            if m := oov_re.match(token):
+                pos = int(m[1])
                 if pos >= len(pos_to_word):
                     raise OOVIndexError(pos, source_seq, target_seq)
                 token_out = pos_to_word[pos]

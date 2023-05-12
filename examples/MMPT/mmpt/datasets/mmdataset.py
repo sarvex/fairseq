@@ -62,19 +62,18 @@ class MMDataset(Dataset):
 
         if len(samples) == 0:
             return {}
-        if isinstance(samples[0], dict):
-            batch = OrderedDict()
-            for key in samples[0]:
-                if samples[0][key] is not None:
-                    batch[key] = default_collate(
-                        [sample[key] for sample in samples])
-                # if torch.is_tensor(batch[key]):
-                #    print(key, batch[key].size())
-                # else:
-                #    print(key, len(batch[key]))
-            return batch
-        else:
+        if not isinstance(samples[0], dict):
             return default_collate(samples)
+        batch = OrderedDict()
+        for key in samples[0]:
+            if samples[0][key] is not None:
+                batch[key] = default_collate(
+                    [sample[key] for sample in samples])
+            # if torch.is_tensor(batch[key]):
+            #    print(key, batch[key].size())
+            # else:
+            #    print(key, len(batch[key]))
+        return batch
 
     def print_example(self, output):
         print("[one example]", output["video_id"])

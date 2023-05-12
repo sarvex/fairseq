@@ -16,6 +16,9 @@ from typing import Dict, Optional
 
 def fixed_pooling_monotonic_attention(monotonic_attention):
     def create_model(monotonic_attention, klass):
+
+
+
         class FixedStrideMonotonicAttention(monotonic_attention):
             def __init__(self, args):
                 self.waitk_lagging = 0
@@ -39,15 +42,14 @@ def fixed_pooling_monotonic_attention(monotonic_attention):
                     def last(key):
                         if key.size(2) < self.pre_decision_ratio:
                             return key
-                        else:
-                            k = key[
-                                :,
-                                :,
-                                self.pre_decision_ratio - 1:: self.pre_decision_ratio,
-                            ].contiguous()
-                            if key.size(-1) % self.pre_decision_ratio != 0:
-                                k = torch.cat([k, key[:, :, -1:]], dim=-1).contiguous()
-                            return k
+                        k = key[
+                            :,
+                            :,
+                            self.pre_decision_ratio - 1:: self.pre_decision_ratio,
+                        ].contiguous()
+                        if key.size(-1) % self.pre_decision_ratio != 0:
+                            k = torch.cat([k, key[:, :, -1:]], dim=-1).contiguous()
+                        return k
 
                     self.pooling_layer = last
                 else:
@@ -95,12 +97,12 @@ def fixed_pooling_monotonic_attention(monotonic_attention):
                 return x_upsample.squeeze(1).view(bsz_num_heads, tgt_len, -1)
 
             def p_choose(
-                self,
-                query: Optional[Tensor],
-                key: Optional[Tensor],
-                key_padding_mask: Optional[Tensor] = None,
-                incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
-            ):
+                            self,
+                            query: Optional[Tensor],
+                            key: Optional[Tensor],
+                            key_padding_mask: Optional[Tensor] = None,
+                            incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
+                        ):
                 assert key is not None
                 assert query is not None
                 src_len = key.size(0)
@@ -120,15 +122,12 @@ def fixed_pooling_monotonic_attention(monotonic_attention):
                 else:
                     key_padding_mask_pool = None
 
-                if incremental_state is not None:
-                    # The floor instead of ceil is used for inference
-                    # But make sure the length key_pool at least 1
-                    if (
-                        max(1, math.floor(key.size(0) / self.pre_decision_ratio))
-                    ) < key_pool.size(0):
-                        key_pool = key_pool[:-1]
-                        if key_padding_mask_pool is not None:
-                            key_padding_mask_pool = key_padding_mask_pool[:-1]
+                if incremental_state is not None and (
+                    max(1, math.floor(key.size(0) / self.pre_decision_ratio))
+                ) < key_pool.size(0):
+                    key_pool = key_pool[:-1]
+                    if key_padding_mask_pool is not None:
+                        key_padding_mask_pool = key_padding_mask_pool[:-1]
 
                 p_choose_pooled = self.p_choose_from_qk(
                     query,
@@ -165,6 +164,7 @@ def fixed_pooling_monotonic_attention(monotonic_attention):
                 ]
 
                 return p_choose
+
 
         FixedStrideMonotonicAttention.__name__ = klass.__name__
         return FixedStrideMonotonicAttention

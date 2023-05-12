@@ -50,12 +50,7 @@ def extended_noun_chunks(sentence):
 
 
 def find_token(sentence, start_pos):
-    found_tok = None
-    for tok in sentence:
-        if tok.idx == start_pos:
-            found_tok = tok
-            break
-    return found_tok
+    return next((tok for tok in sentence if tok.idx == start_pos), None)
 
 
 def find_span(sentence, search_text, start=0):
@@ -68,8 +63,7 @@ def find_span(sentence, search_text, start=0):
             for next_tok in sentence[tok.i :]:
                 end_idx = next_tok.idx + len(next_tok.text)
                 if end_idx - start_idx == len_to_consume:
-                    span = sentence[tok.i : next_tok.i + 1]
-                    return span
+                    return sentence[tok.i : next_tok.i + 1]
     return None
 
 
@@ -77,16 +71,14 @@ def find_span(sentence, search_text, start=0):
 def get_detokenizer():
     from sacremoses import MosesDetokenizer
 
-    detok = MosesDetokenizer(lang="en")
-    return detok
+    return MosesDetokenizer(lang="en")
 
 
 @lru_cache(maxsize=1)
 def get_spacy_nlp():
     import en_core_web_lg
 
-    nlp = en_core_web_lg.load()
-    return nlp
+    return en_core_web_lg.load()
 
 
 def jsonl_iterator(input_fname, positive_only=False, ngram_order=3, eval=False):
@@ -219,7 +211,7 @@ def filter_noun_chunks(
         chunks = [
             np
             for np in chunks
-            if (np.lemma_ != "-PRON-" and not all(tok.pos_ == "PRON" for tok in np))
+            if np.lemma_ != "-PRON-" and any(tok.pos_ != "PRON" for tok in np)
         ]
 
     if exclude_query is not None:
@@ -227,13 +219,14 @@ def filter_noun_chunks(
         filtered_chunks = []
         for chunk in chunks:
             lower_chunk = chunk.text.lower()
-            found = False
-            for excl in excl_txt:
-                if (
-                    not exact_match and (lower_chunk in excl or excl in lower_chunk)
-                ) or lower_chunk == excl:
-                    found = True
-                    break
+            found = any(
+                (
+                    not exact_match
+                    and (lower_chunk in excl or excl in lower_chunk)
+                )
+                or lower_chunk == excl
+                for excl in excl_txt
+            )
             if not found:
                 filtered_chunks.append(chunk)
         chunks = filtered_chunks

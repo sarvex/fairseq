@@ -98,7 +98,7 @@ class WSCCriterion(LegacyFairseqCriterion):
 
             id = sample["id"][i].item()
             if self.prediction_h is not None:
-                print("{}\t{}\t{}".format(id, pred, label), file=self.prediction_h)
+                print(f"{id}\t{pred}\t{label}", file=self.prediction_h)
 
         if nloss == 0:
             loss = torch.tensor(0.0, requires_grad=True)

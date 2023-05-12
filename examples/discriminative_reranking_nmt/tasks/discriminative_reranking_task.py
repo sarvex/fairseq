@@ -101,11 +101,7 @@ class RerankerScorer(object):
             batch_out = model.joint_forward(
                 batch_out.view(self.mt_beam, bs // self.mt_beam, -1)
             )
-        scores = model.classification_forward(
-            batch_out.view(bs, 1, -1)
-        )  # input: B x T x C
-
-        return scores
+        return model.classification_forward(batch_out.view(bs, 1, -1))
 
 
 @register_task(
@@ -142,7 +138,7 @@ class DiscriminativeRerankingNMTTask(FairseqTask):
             cfg, os.path.join(data_path, "input_src/dict.txt")
         )
 
-        logger.info("[input] src dictionary: {} types".format(len(data_dict)))
+        logger.info(f"[input] src dictionary: {len(data_dict)} types")
 
         return DiscriminativeRerankingNMTTask(cfg, data_dict)
 
@@ -411,8 +407,8 @@ class DiscriminativeRerankingNMTTask(FairseqTask):
             logging_output["_bleu_ref_len"] = bleu_data[1]
 
             for i in range(EVAL_BLEU_ORDER):
-                logging_output["_bleu_counts_" + str(i)] = bleu_data[2 + i]
-                logging_output["_bleu_totals_" + str(i)] = bleu_data[
+                logging_output[f"_bleu_counts_{str(i)}"] = bleu_data[2 + i]
+                logging_output[f"_bleu_totals_{str(i)}"] = bleu_data[
                     2 + EVAL_BLEU_ORDER + i
                 ]
 
@@ -446,8 +442,8 @@ class DiscriminativeRerankingNMTTask(FairseqTask):
         if self.cfg.target_metric == "bleu":
             counts, totals = [], []
             for i in range(EVAL_BLEU_ORDER):
-                counts.append(sum_logs("_bleu_counts_" + str(i)))
-                totals.append(sum_logs("_bleu_totals_" + str(i)))
+                counts.append(sum_logs(f"_bleu_counts_{str(i)}"))
+                totals.append(sum_logs(f"_bleu_totals_{str(i)}"))
 
             if max(totals) > 0:
                 # log counts as numpy arrays -- log_scalar will sum them correctly

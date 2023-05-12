@@ -39,14 +39,13 @@ class FairseqMMDataset(FairseqDataset):
             return self.mmdataset.collator(samples)
         if len(samples) == 0:
             return {}
-        if isinstance(samples[0], dict):
-            batch = OrderedDict()
-            for key in samples[0]:
-                if samples[0][key] is not None:
-                    batch[key] = default_collate([sample[key] for sample in samples])
-            return batch
-        else:
+        if not isinstance(samples[0], dict):
             return default_collate(samples)
+        batch = OrderedDict()
+        for key in samples[0]:
+            if samples[0][key] is not None:
+                batch[key] = default_collate([sample[key] for sample in samples])
+        return batch
 
     def size(self, index):
         """dummy implementation: we don't use --max-tokens"""

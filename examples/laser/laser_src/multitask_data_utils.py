@@ -13,7 +13,7 @@ from fairseq.data import BaseWrapperDataset, FairseqDataset, iterators
 class MultiItr(object):
     def __init__(self, itr):
         self.itr = itr
-        self._counts = [0 for x in itr]
+        self._counts = [0 for _ in itr]
 
     def __len__(self):
         return sum(len(itr) for itr in self.itr)

@@ -100,20 +100,14 @@ class ShardedVideoProcessor(Processor):
                 os.path.join(self.vfeat_dir, "train" + "_" + str(shard_id)),
                 "r"
             )
-        elif self.split == "valid":
-            shard = ShardedTensor.load(
-                os.path.join(self.vfeat_dir, "val" + "_" + str(shard_id)),
-                "r"
-            )
-        elif self.split == "test":
+        elif self.split in ["valid", "test"]:
             shard = ShardedTensor.load(
                 os.path.join(self.vfeat_dir, "val" + "_" + str(shard_id)),
                 "r"
             )
         else:
             raise ValueError("unknown split", self.split)
-        feat = shard[video_idx]
-        return feat
+        return shard[video_idx]
 
 
 class ShardedTextProcessor(Processor):
@@ -124,18 +118,14 @@ class ShardedTextProcessor(Processor):
     def __call__(self, video_id):
         _, _, shard_id, shard_idx = video_id
         if self.split == "train":
-            target_path = self.tfeat_dir + "train" + "_" + str(shard_id)
-        elif self.split == "valid":
-            target_path = self.tfeat_dir + "val" + "_" + str(shard_id)
-        elif self.split == "test":
-            target_path = self.tfeat_dir + "val" + "_" + str(shard_id)
+            target_path = f"{self.tfeat_dir}train_{str(shard_id)}"
+        elif self.split in ["valid", "test"]:
+            target_path = f"{self.tfeat_dir}val_{str(shard_id)}"
         else:
             raise ValueError("unknown split", self.split)
 
-        startend = ShardedTensor.load(
-            target_path + ".startends", "r")[shard_idx]
-        cap_ids = ShardedTensor.load(
-            target_path + ".caps_ids", "r")[shard_idx]
+        startend = ShardedTensor.load(f"{target_path}.startends", "r")[shard_idx]
+        cap_ids = ShardedTensor.load(f"{target_path}.caps_ids", "r")[shard_idx]
         cap = []
         for clip_idx in range(len(cap_ids)):
             clip = cap_ids[clip_idx]
@@ -204,11 +194,8 @@ class FixedLenAligner(Aligner):
         else:
             raise ValueError(
                 "dataset.subsampling must be >= 1 for efficient video loading.")
-            batch = self.sampling(video_idx, video_feature, text_feature)
-            batch = self.batch_post_processing(batch, video_feature)
-
         batch["video_id"] = video_id if isinstance(video_id, str) \
-            else video_id[0]
+                else video_id[0]
         # e2e: make sure frame ids is into tensor.
         assert torch.is_tensor(batch["vfeats"])
         return batch
@@ -321,10 +308,7 @@ class OverlappedAligner(VariedLenAligner):
             video_len = math.ceil(text_feature["end"][-1])
         low = math.floor(text_feature["start"][text_clip_indexs[0]])
         high = math.ceil(text_feature["end"][text_clip_indexs[-1]])
-        if low < high:
-            center = random.randint(low, high)
-        else:
-            center = int((low + high) // 2)
+        center = random.randint(low, high) if low < high else int((low + high) // 2)
         center = max(0, min(video_feature.shape[0] - 1, center))
 
         assert 0 <= center < video_feature.shape[0]
@@ -463,19 +447,18 @@ class FrameMaskingProcessor(Processor):
         Return: `video_label` is a binary mask.
         """
         video_label = vmasks.clone()
-        if modality_masking is not None:
-            if modality_masking == "full":
-                probability_matrix = torch.full(video_label.shape, 1.)
-            elif modality_masking == "no":
-                probability_matrix = torch.full(video_label.shape, 0.)
-            elif modality_masking == "inverse":
-                probability_matrix = torch.full(
-                    video_label.shape, 1. - self.mfm_probability)
-            else:
-                raise ValueError("unknown modality masking.", modality_masking)
-        else:
+        if modality_masking is None:
             probability_matrix = torch.full(
                 video_label.shape, self.mfm_probability)
+        elif modality_masking == "full":
+            probability_matrix = torch.full(video_label.shape, 1.)
+        elif modality_masking == "no":
+            probability_matrix = torch.full(video_label.shape, 0.)
+        elif modality_masking == "inverse":
+            probability_matrix = torch.full(
+                video_label.shape, 1. - self.mfm_probability)
+        else:
+            raise ValueError("unknown modality masking.", modality_masking)
         masked_indices = torch.bernoulli(probability_matrix).bool()
         # We only compute loss on masked tokens
         video_label[~masked_indices] = 0
@@ -538,29 +521,28 @@ class TextMaskingProcessor(Processor):
         labels = inputs.clone()
         # We sample a few tokens in each sequence for MLM training
         # (with probability `self.mlm_probability`)
-        if modality_masking is not None:
-            if modality_masking == "full":
-                probability_matrix = torch.full(labels.shape, 1.)
-            elif modality_masking == "no":
-                probability_matrix = torch.full(labels.shape, 0.)
-            elif modality_masking.startswith("textgen"):
-                # [CLS] [SEP] <s> ...
-                inputs, labels = self.textgen(inputs)
-                if "mask" not in modality_masking:
-                    return inputs, labels
-                inputs = self.mask_input(inputs, special_tokens_mask)
-                return inputs, labels
-            elif modality_masking == "mask":
-                inputs = self.mask_input(inputs, special_tokens_mask)
-                labels = torch.full(inputs.shape, -100)
-                return inputs, labels
-            elif modality_masking == "inverse":
-                probability_matrix = torch.full(labels.shape, 1. - self.mlm_probability)
-            else:
-                raise ValueError("unknown modality masking.", modality_masking)
-        else:
+        if modality_masking is None:
             probability_matrix = torch.full(labels.shape, self.mlm_probability)
 
+        elif modality_masking == "full":
+            probability_matrix = torch.full(labels.shape, 1.)
+        elif modality_masking == "no":
+            probability_matrix = torch.full(labels.shape, 0.)
+        elif modality_masking.startswith("textgen"):
+            # [CLS] [SEP] <s> ...
+            inputs, labels = self.textgen(inputs)
+            if "mask" not in modality_masking:
+                return inputs, labels
+            inputs = self.mask_input(inputs, special_tokens_mask)
+            return inputs, labels
+        elif modality_masking == "mask":
+            inputs = self.mask_input(inputs, special_tokens_mask)
+            labels = torch.full(inputs.shape, -100)
+            return inputs, labels
+        elif modality_masking == "inverse":
+            probability_matrix = torch.full(labels.shape, 1. - self.mlm_probability)
+        else:
+            raise ValueError("unknown modality masking.", modality_masking)
         if special_tokens_mask is None:
             special_tokens_mask = self.get_special_tokens_mask(
                 labels.tolist(), already_has_special_tokens=True
@@ -713,20 +695,19 @@ class TextClipSamplingProcessor(Processor):
                 text_len += len(text_feature["cap"][end_idx])
                 end_idx += 1
             elif start_idx > 0:
-                if random.random() > self.keep_prob and (start_idx - 1) > 0:
+                if random.random() > self.keep_prob and start_idx > 1:
                     start_idx = start_idx - 1
                 start_idx -= 1
                 text_clip_indexs.insert(0, start_idx)
                 text_len += len(text_feature["cap"][start_idx])
             else:
-                if end_idx < t_num_clips:
-                    if random.random() > self.keep_prob and (end_idx + 1) < t_num_clips:
-                        end_idx = end_idx + 1
-                    text_clip_indexs.append(end_idx)
-                    text_len += len(text_feature["cap"][end_idx])
-                    end_idx += 1
-                else:
+                if end_idx >= t_num_clips:
                     return text_clip_indexs
+                if random.random() > self.keep_prob and (end_idx + 1) < t_num_clips:
+                    end_idx = end_idx + 1
+                text_clip_indexs.append(end_idx)
+                text_len += len(text_feature["cap"][end_idx])
+                end_idx += 1
             video_len = max(
                 0,
                 text_feature["end"][text_clip_indexs[-1]]
@@ -747,11 +728,12 @@ class VideoClipSamplingProcessor(Processor):
         start, end = center, center
         while (start > 0 or end < video_len) and t_clip_len < max_video_len:
             # decide the direction to grow.
-            if start <= 0:
-                end += 1
-            elif end >= video_len:
-                start -= 1
-            elif random.random() > 0.5:
+            if (
+                start <= 0
+                or start > 0
+                and end < video_len
+                and random.random() > 0.5
+            ):
                 end += 1
             else:
                 start -= 1
@@ -814,11 +796,11 @@ class How2MILNCEAligner(FixedLenAligner):
         if self.num_candidates == 1:
             words = [ind]
         else:
-            words = []
             cap_start = self._find_nearest_candidates(cap, ind)
-            for i in range(self.num_candidates):
-                words.append([max(0, min(len(cap["cap"]) - 1, cap_start + i))])
-
+            words = [
+                [max(0, min(len(cap["cap"]) - 1, cap_start + i))]
+                for i in range(self.num_candidates)
+            ]
         start, end = cap["start"][ind], cap["end"][ind]
         # TODO: May need to be improved for edge cases.
         # expand the min time.
@@ -873,7 +855,7 @@ class PKLJSONStrTextProcessor(TextProcessor):
             import json
             caption = json.loads(caption)
             cap = []
-            for clip_idx, text_clip in enumerate(caption["text"]):
+            for text_clip in caption["text"]:
                 clip_ids = []
                 if isinstance(text_clip, str):
                     clip_ids = self.tokenizer(

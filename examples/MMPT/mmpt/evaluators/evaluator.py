@@ -31,8 +31,7 @@ class Evaluator(object):
     def __call__(self):
         try:
             print(self.predictor.pred_dir)
-            for pred_file in glob.glob(
-                    self.predictor.pred_dir + "/*_merged.npy"):
+            for pred_file in glob.glob(f"{self.predictor.pred_dir}/*_merged.npy"):
                 outputs = np.load(pred_file)
                 results = self.metric.compute_metrics(outputs)
                 self.metric.print_computed_metrics(results)
@@ -50,5 +49,4 @@ class Evaluator(object):
             eval_dataloader = self.eval_dataloader
         outputs = self.predictor.predict_loop(
             model, eval_dataloader, output_file)
-        results = self.metric.compute_metrics(**outputs)
-        return results
+        return self.metric.compute_metrics(**outputs)

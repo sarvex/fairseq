@@ -85,7 +85,10 @@ def check_train_all(raw_data, directions, all_test_data):
     data_sizes = {}
     # raw_data = '~chau/data-bin/MineBART/multilingual_mined_100M/en_XX/et_EE-en_XX/all.{en_XX, et_EE}'
     print(f'checking training data againsts # {len(all_test_data)} sentences')
-    print(f'example test data: ', [s for i, s in enumerate(all_test_data.keys()) if i < 10])
+    print(
+        'example test data: ',
+        [s for i, s in enumerate(all_test_data.keys()) if i < 10],
+    )
     for direction in directions:
         src, tgt = direction.split('-')
         path = f'{raw_data}/en_XX/{direction}/all'

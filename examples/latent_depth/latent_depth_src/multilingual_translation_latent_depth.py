@@ -44,14 +44,15 @@ class MultilingualTranslationTaskLatentDepth(MultilingualTranslationTask):
         self.src_langs, self.tgt_langs = zip(
             *[(lang.split("-")[0], lang.split("-")[1]) for lang in args.lang_pairs]
         )
-        if self.training and self.encoder_latent_layer:
-            assert self.args.share_encoders
-        if self.training and self.decoder_latent_layer:
-            assert self.args.share_decoders
+        if self.training:
+            if self.encoder_latent_layer:
+                assert self.args.share_encoders
+            if self.decoder_latent_layer:
+                assert self.args.share_decoders
         if training or self.encoder_latent_layer or self.decoder_latent_layer:
             self.lang_pairs = args.lang_pairs
         else:
-            self.lang_pairs = ["{}-{}".format(args.source_lang, args.target_lang)]
+            self.lang_pairs = [f"{args.source_lang}-{args.target_lang}"]
         self.eval_lang_pairs = self.lang_pairs
         self.model_lang_pairs = self.lang_pairs
         if self.training and (self.encoder_latent_layer or self.decoder_latent_layer):

@@ -39,17 +39,16 @@ class Shard(object):
                 video_shard = []
                 for video_id in self.video_ids[split][shard_offset:shard_offset+self.shard_size]:
                     meta_shard.append(video_id)
-                    npy_file = os.path.join(self.vfeat_dir, video_id + ".npy")
+                    npy_file = os.path.join(self.vfeat_dir, f"{video_id}.npy")
                     video_shard.append(np.load(npy_file))
 
                 meta[shard_idx] = meta_shard
                 video_shard = ShardedTensor.from_list(video_shard)
-                target_path = os.path.join(
-                    self.target_dir, split + "_" + str(shard_idx))
+                target_path = os.path.join(self.target_dir, f"{split}_{str(shard_idx)}")
                 video_shard.save(target_path)
 
-            target_path = os.path.join(self.target_dir, split + "_meta")
-            with open(target_path + ".pkl", "wb") as fw:
+            target_path = os.path.join(self.target_dir, f"{split}_meta")
+            with open(f"{target_path}.pkl", "wb") as fw:
                 pickle.dump(meta, fw, pickle.HIGHEST_PROTOCOL)
 
 

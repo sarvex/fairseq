@@ -40,14 +40,13 @@ def get_dataloader(config):
     output = test_data[0]
     test_data.print_example(output)
 
-    test_dataloader = DataLoader(
+    return DataLoader(
         test_data,
         batch_size=config.fairseq.dataset.batch_size,
         shuffle=False,
         num_workers=6,
         collate_fn=test_data.collater,
     )
-    return test_dataloader
 
 
 def main(args):
@@ -64,19 +63,18 @@ def main(args):
 
     test_dataloader = get_dataloader(config)
     checkpoint_search_path = os.path.dirname(config.eval.save_path)
-    results = []
-
     prefix = os.path.basename(args.taskconfig)
     if prefix.startswith("test"):
+        results = []
+
         # loop all checkpoint for datasets without validation set.
         if "best" not in config.fairseq.common_eval.path:
             print("eval each epoch.")
-            for checkpoint in glob.glob(checkpoint_search_path + "/checkpoint*"):
+            for checkpoint in glob.glob(f"{checkpoint_search_path}/checkpoint*"):
                 model = mmtask.load_checkpoint(checkpoint)
                 ckpt = os.path.basename(checkpoint)
                 evaluator = Evaluator(config)
-                output = evaluator.evaluate(
-                    model, test_dataloader, ckpt + "_merged")
+                output = evaluator.evaluate(model, test_dataloader, f"{ckpt}_merged")
                 results.append((checkpoint, output))
         # use the one specified by the config lastly.
         model = mmtask.load_checkpoint(config.fairseq.common_eval.path)

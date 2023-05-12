@@ -25,8 +25,7 @@ def _skew(X, pad_value):
     X = F.pad(X, (0, M + 1), value=pad_value)  # B x M x (L+M+1)
     X = X.view(B, -1)  # B x ML+MM+M
     X = X[:, :-M]  # B x ML+MM
-    X = X.view(B, M, M + L)  # B x M x L+M
-    return X
+    return X.view(B, M, M + L)
 
 
 def _unskew(X):
@@ -84,8 +83,7 @@ class SeqAttention(nn.Module):
         attn = self.dropout(attn)  # B x M X L_pos
 
         attn_cont = _skew(attn, 0)  # B x M X (L+M)
-        out = torch.matmul(attn_cont, value)  # B x M x H
-        return out
+        return torch.matmul(attn_cont, value)
 
     def get_cache_size(self):
         return self.adaptive_span.get_cache_size()
@@ -148,8 +146,7 @@ class FeedForwardLayer(nn.Module):
     def forward(self, h):
         h1 = F.relu(self.fc1(h))
         h1 = self.dropout(h1)
-        h2 = self.fc2(h1)
-        return h2
+        return self.fc2(h1)
 
 
 class TransformerSeqLayer(nn.Module):
@@ -166,12 +163,10 @@ class TransformerSeqLayer(nn.Module):
         h_all = torch.cat([h_cache, h], dim=1)  # B x (M+L) x H
         attn_out = self.attn(h, h_all, h_all, key_pe)
         h = self.norm1(h + attn_out)  # B x M x H
-        if self.ff is not None:
-            ff_out = self.ff(h)
-            out = self.norm2(h + ff_out)  # B x M x H
-        else:
-            out = h
-        return out
+        if self.ff is None:
+            return h
+        ff_out = self.ff(h)
+        return self.norm2(h + ff_out)
 
     def get_cache_size(self):
         return self.attn.attn.get_cache_size()
@@ -196,10 +191,7 @@ class TransformerSeq(nn.Module):
         nn.init.normal_(self.in_emb.weight, mean=0, std=d_model ** -0.5)
         self.out_emb = nn.Linear(d_model, vocab_size)
         self.aux_loss_scaler = aux_loss_scaler
-        if emb_dropout > 0:
-            self.emb_dropout = nn.Dropout(emb_dropout)
-        else:
-            self.emb_dropout = None
+        self.emb_dropout = nn.Dropout(emb_dropout) if emb_dropout > 0 else None
         # position embeddings
         self.key_pe = nn.Parameter(torch.randn(1, d_model // n_head, attn_span))
 

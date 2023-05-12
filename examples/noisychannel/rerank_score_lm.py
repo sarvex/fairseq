@@ -31,7 +31,7 @@ def score_lm(args):
         args.source_prefix_frac,
     )
 
-    predictions_bpe_file = pre_gen + "/generate_output_bpe.txt"
+    predictions_bpe_file = f"{pre_gen}/generate_output_bpe.txt"
     if using_nbest:
         print("Using predefined n-best list from interactive.py")
         predictions_bpe_file = args.nbest_list

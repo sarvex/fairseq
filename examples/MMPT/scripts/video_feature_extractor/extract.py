@@ -128,14 +128,15 @@ with th.no_grad():
                     min_ind = factor * i * args.batch_size
                     max_ind = factor * (i + 1) * args.batch_size
                     video_batch = video[min_ind:max_ind:factor].cuda()
-                    if args.type == '2d':
+                    if (
+                        args.type == '2d'
+                        or args.type != 's3d'
+                        and args.type == "vae"
+                    ):
                         batch_features = model(video_batch) # (51, 487), (51, 512)
                     elif args.type == 's3d':
                         batch_features = model(video_batch)
                         batch_features = batch_features['video_embedding']
-                    elif args.type == "vae":
-                        # image_code.
-                        batch_features = model(video_batch)
                     else:
                         batch_pred, batch_features = model(video_batch) # (51, 487), (51, 512)
                     if args.l2_normalize:
@@ -143,15 +144,15 @@ with th.no_grad():
                     features[i*args.batch_size:(i+1)*args.batch_size] = batch_features
                 features = features.cpu().numpy()
                 if args.half_precision:
-                    if args.type == "vae":
-                        features = features.astype(np.int16)
-                    else:
-                        features = features.astype('float16')
+                    features = (
+                        features.astype(np.int16)
+                        if args.type == "vae"
+                        else features.astype('float16')
+                    )
+                elif args.type == "vae":
+                    features = features.astype(np.int32)
                 else:
-                    if args.type == "vae":
-                        features = features.astype(np.int32)
-                    else:
-                        features = features.astype('float32')
+                    features = features.astype('float32')
                 np.save(output_file, features)
         else:
-            print('Video {} error.'.format(input_file))
+            print(f'Video {input_file} error.')

@@ -49,9 +49,9 @@ def numpify(shard_idx, video_ids, captions, target_dir, split, prefix, max_cap_l
         prefix + split + "_" + str(shard_idx)
     )
     print("save to", target_path)
-    startends.save(target_path + ".startends")
+    startends.save(f"{target_path}.startends")
     caps_ids = ShardedTensor.from_list(caps_ids)
-    caps_ids.save(target_path + ".caps_ids")
+    caps_ids.save(f"{target_path}.caps_ids")
 
 
 def sharding(config, out_file):
@@ -62,8 +62,8 @@ def sharding(config, out_file):
                 os.path.splitext(config.caption_pkl_path)[0]
             ) + "." + config.bert_name + "."
     for split in ["train", "val"]:
-        target_path = os.path.join(target_dir, split + "_meta")
-        with open(target_path + ".pkl", "rb") as fr:
+        target_path = os.path.join(target_dir, f"{split}_meta")
+        with open(f"{target_path}.pkl", "rb") as fr:
             meta = pickle.load(fr)
         print("load meta", target_path, len(meta))
         for shard_id in meta:

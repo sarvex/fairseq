@@ -434,10 +434,12 @@ class LSTMDecoder(FairseqIncrementalDecoder):
             num_layers = len(self.layers)
             if self.sentemb2init is None:
                 prev_hiddens = [
-                    x.data.new(bsz, self.hidden_size).zero_() for i in range(num_layers)
+                    x.data.new(bsz, self.hidden_size).zero_()
+                    for _ in range(num_layers)
                 ]
                 prev_cells = [
-                    x.data.new(bsz, self.hidden_size).zero_() for i in range(num_layers)
+                    x.data.new(bsz, self.hidden_size).zero_()
+                    for _ in range(num_layers)
                 ]
             else:
                 init = self.sentemb2init(sentemb)

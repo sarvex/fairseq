@@ -45,15 +45,14 @@ class Predictor(object):
         pass
 
     def to_ctx(self, data, ctx=0, dtype=None):
-        if isinstance(data, dict):
-            for key in data:
-                if torch.is_tensor(data[key]):
-                    if dtype is not None and data[key].dtype == torch.float32:
-                        data[key] = data[key].to(dtype)
-                    data[key] = data[key].to(ctx)
-            return data
-        else:
+        if not isinstance(data, dict):
             raise ValueError("non-dict type of batch is not supported yet.")
+        for key in data:
+            if torch.is_tensor(data[key]):
+                if dtype is not None and data[key].dtype == torch.float32:
+                    data[key] = data[key].to(dtype)
+                data[key] = data[key].to(ctx)
+        return data
 
 
 class NLGPredictor(Predictor):
@@ -103,8 +102,7 @@ class NLGPredictor(Predictor):
 
     def finalize(self, outputs, output_file=None):
         if output_file is not None:
-            with open(os.path.join(
-                    self.pred_dir, output_file + ".json"), "w") as fw:
+            with open(os.path.join(self.pred_dir, f"{output_file}.json"), "w") as fw:
                 json.dump(outputs, fw, indent=4)
         return outputs
 
@@ -143,11 +141,10 @@ class RetrievalPredictor(Predictor):
                 outputs = model(**data)
                 outputs.update(data)
                 self(outputs, full_scores)
-                for _cap in data["caps"]:
-                    texts.append(
-                        self.tokenizer.decode(_cap, skip_special_tokens=True)
-                    )
-
+                texts.extend(
+                    self.tokenizer.decode(_cap, skip_special_tokens=True)
+                    for _cap in data["caps"]
+                )
         return self.finalize(full_scores, texts, output_file)
 
     def __call__(self, sample, full_scores):
@@ -157,7 +154,7 @@ class RetrievalPredictor(Predictor):
     def finalize(self, full_scores, texts, output_file=None):
         outputs = self._aggregate_scores(full_scores)
         if output_file is not None:
-            np.save(os.path.join(self.pred_dir, output_file + ".npy"), outputs)
+            np.save(os.path.join(self.pred_dir, f"{output_file}.npy"), outputs)
         return {"outputs": outputs, "texts": texts}
 
     def _get_pooled_outputs(self, outputs):
@@ -223,7 +220,7 @@ class QAPredictor(Predictor):
     def finalize(self, output_file=None):
         outputs, targets = self._aggregate_scores(self.full_scores)
         if output_file is not None:
-            np.save(os.path.join(self.pred_dir, output_file + ".npy"), outputs)
+            np.save(os.path.join(self.pred_dir, f"{output_file}.npy"), outputs)
         return {"outputs": outputs, "targets": targets}
 
     def _append_scores(self, scores, answers, full_scores):
@@ -297,7 +294,10 @@ class CrossTaskPredictor(Predictor):
                 break
 
         logits /= logits_counts
-        assert logits.size() == (video_len, batch_logits.size(1)), "{}, {}".format(logits.size(), video_len)
+        assert logits.size() == (
+            video_len,
+            batch_logits.size(1),
+        ), f"{logits.size()}, {video_len}"
 
         O = self.lsm(logits)
         y = np.zeros(O.size(), dtype=np.float32)
@@ -305,8 +305,7 @@ class CrossTaskPredictor(Predictor):
         if task not in Y_pred:
             Y_pred[task] = {}
         Y_pred[task][vid] = y
-        annot_path = os.path.join(
-            self.annotation_path, task+'_'+vid+'.csv')
+        annot_path = os.path.join(self.annotation_path, f'{task}_{vid}.csv')
         if os.path.exists(annot_path):
             if task not in Y_true:
                 Y_true[task] = {}
@@ -315,9 +314,7 @@ class CrossTaskPredictor(Predictor):
 
     def finalize(self, Y_pred, Y_true, output_file=None):
         if output_file is not None:
-            with open(
-                    os.path.join(self.pred_dir, output_file + ".pkl"),
-                    "wb") as fw:
+            with open(os.path.join(self.pred_dir, f"{output_file}.pkl"), "wb") as fw:
                 pickle.dump(
                     {"Y_pred": Y_pred, "Y_true": Y_true}, fw,
                     protocol=pickle.HIGHEST_PROTOCOL)
@@ -404,7 +401,10 @@ class COINPredictor(Predictor):
             if (video_len - window_start) <= self.sliding_window_size:
                 break
         logits /= logits_counts
-        assert logits.size() == (video_len, batch_logits.size(1)), "{}, {}".format(logits.size(), video_len)
+        assert logits.size() == (
+            video_len,
+            batch_logits.size(1),
+        ), f"{logits.size()}, {video_len}"
         return logits
 
     def finalize(self, Y_pred, Y_true, output_file=None):
@@ -417,9 +417,7 @@ class COINPredictor(Predictor):
         print("sample error", Y_pred[error_mask][10:20], Y_true[error_mask][10:20])
 
         if output_file is not None:
-            with open(
-                    os.path.join(self.pred_dir, output_file + ".pkl"),
-                    "wb") as fw:
+            with open(os.path.join(self.pred_dir, f"{output_file}.pkl"), "wb") as fw:
                 pickle.dump(
                     {"Y_pred": Y_pred, "Y_true": Y_true}, fw,
                     protocol=pickle.HIGHEST_PROTOCOL)
@@ -502,9 +500,7 @@ class COINZSPredictor(COINPredictor):
         print("sample error", Y_pred[error_mask][10:20], Y_true[error_mask][10:20])
 
         if output_file is not None:
-            with open(
-                    os.path.join(self.pred_dir, output_file + ".pkl"),
-                    "wb") as fw:
+            with open(os.path.join(self.pred_dir, f"{output_file}.pkl"), "wb") as fw:
                 pickle.dump(
                     {"Y_pred": Y_pred, "Y_true": Y_true}, fw,
                     protocol=pickle.HIGHEST_PROTOCOL)
@@ -528,8 +524,7 @@ class DiDeMoPredictor(Predictor):
         import itertools
         # 21 chunks.
         self.possible_segments = [(0,0), (1,1), (2,2), (3,3), (4,4), (5,5)]
-        for i in itertools.combinations(range(6), 2):
-            self.possible_segments.append(i)
+        self.possible_segments.extend(iter(itertools.combinations(range(6), 2)))
         # pick segments from a video.
 
         """on-the-fly prediction on a single gpu."""
@@ -548,7 +543,7 @@ class DiDeMoPredictor(Predictor):
                     "hidden_video": hidden_video,
                     "pooled_text": pooled_text
                 }
-                outputs.update(data)
+                outputs |= data
                 self(outputs)
         return self.finalize(output_file)
 
@@ -560,14 +555,14 @@ class DiDeMoPredictor(Predictor):
         # probably maintain valid results here.
 
         hidden_video = hidden_video[:, 1:-1, :]
-        # probably maintain valid results here.
-        pooled_video = []
-        for s, e in self.possible_segments:
-            pooled_video.append(
-                torch.mean(
-                    hidden_video[:, int(s*5):int((e+1)*5), :],
-                    dim=1, keepdim=True)
+        pooled_video = [
+            torch.mean(
+                hidden_video[:, int(s * 5) : int((e + 1) * 5), :],
+                dim=1,
+                keepdim=True,
             )
+            for s, e in self.possible_segments
+        ]
         pooled_video = torch.cat(pooled_video, dim=1)
         scores = torch.bmm(
             pooled_video, pooled_text.unsqueeze(-1)).squeeze(-1).cpu()
@@ -576,7 +571,7 @@ class DiDeMoPredictor(Predictor):
 
         for batch_idx, rank in enumerate(ranks):
             rank_of_moment = []
-            for m_idx, moment in enumerate(rank):
+            for moment in rank:
                 s, e = self.possible_segments[moment.item()]
                 if torch.any(
                     vmasks[batch_idx, int(s*5):int((e+1)*5)]
@@ -587,7 +582,7 @@ class DiDeMoPredictor(Predictor):
     def finalize(self, output_file=None):
         outputs = self._aggregate_scores(self.full_scores)
         if output_file is not None:
-            np.save(os.path.join(self.pred_dir, output_file + ".npy"), outputs)
+            np.save(os.path.join(self.pred_dir, f"{output_file}.npy"), outputs)
         return {"outputs": outputs, "targets": self.test_data}
 
     def _aggregate_scores(self, scores):

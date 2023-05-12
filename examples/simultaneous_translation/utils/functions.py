@@ -62,8 +62,7 @@ def safe_cumprod(tensor, dim: int, eps: float = 1e-10):
 
     log_tensor = torch.log(tensor + eps)
     cumsum_log_tensor = torch.cumsum(log_tensor, dim)
-    exp_cumsum_log_tensor = torch.exp(cumsum_log_tensor)
-    return exp_cumsum_log_tensor
+    return torch.exp(cumsum_log_tensor)
 
 
 def moving_sum(x, start_idx: int, end_idx: int):
@@ -120,6 +119,4 @@ def moving_sum(x, start_idx: int, end_idx: int):
     assert src_len == moving_sum.size(1)
     assert batch_size * tgt_len == moving_sum.size(0)
 
-    moving_sum = moving_sum.view(batch_size, tgt_len, src_len)
-
-    return moving_sum
+    return moving_sum.view(batch_size, tgt_len, src_len)

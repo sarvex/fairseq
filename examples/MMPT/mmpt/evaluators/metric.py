@@ -42,18 +42,14 @@ class RetrievalMetric(Metric):
         ind = sx - d
         ind = np.where(ind == 0)
         ind = ind[1]
-        metrics = {}
-        metrics["R1"] = float(np.sum(ind == 0)) / len(ind)
+        metrics = {"R1": float(np.sum(ind == 0)) / len(ind)}
         metrics["R5"] = float(np.sum(ind < 5)) / len(ind)
         metrics["R10"] = float(np.sum(ind < 10)) / len(ind)
         metrics["MR"] = np.median(ind) + 1
 
         max_idx = np.argmax(outputs, axis=1)
         if self.error:
-            # print top-20 errors.
-            error = []
-            for ex_idx in range(20):
-                error.append((texts[ex_idx], texts[max_idx[ex_idx]]))
+            error = [(texts[ex_idx], texts[max_idx[ex_idx]]) for ex_idx in range(20)]
             metrics["error"] = error
         return metrics
 
@@ -85,12 +81,7 @@ class DiDeMoMetric(Metric):
     def compute_metrics(self, outputs, targets, **kwargs):
         assert len(outputs) == len(targets)
         rank1, rank5, miou = self._eval_predictions(outputs, targets)
-        metrics = {
-            "rank1": rank1,
-            "rank5": rank5,
-            "miou": miou
-        }
-        return metrics
+        return {"rank1": rank1, "rank5": rank5, "miou": miou}
 
     def print_computed_metrics(self, metrics):
         rank1 = metrics["rank1"]
@@ -226,10 +217,7 @@ class CrossTaskMetric(Metric):
         https://github.com/DmZhukov/CrossTask/blob/master/train.py"""
 
         recalls = self._get_recalls(Y_true=targets, Y_pred=outputs)
-        results = {}
-        for task, rec in recalls.items():
-            results[str(task)] = rec
-
+        results = {str(task): rec for task, rec in recalls.items()}
         avg_recall = np.mean(list(recalls.values()))
         results["recall"] = avg_recall
         return results
@@ -254,9 +242,7 @@ class CrossTaskMetric(Metric):
                 y_pred = ys_pred[vid]
                 step_total[task] += (y_true.sum(axis=0) > 0).sum()
                 step_match[task] += (y_true*y_pred).sum()
-        recalls = {
-            task: step_match[task] / n for task, n in step_total.items()}
-        return recalls
+        return {task: step_match[task] / n for task, n in step_total.items()}
 
 
 class ActionRecognitionMetric(Metric):
@@ -304,10 +290,6 @@ class ActionRecognitionMetric(Metric):
 
     def print_computed_metrics(self, metrics):
         for split, acc in enumerate(metrics["acc_splits"]):
-            print("Top 1 accuracy on split {}: {}; r1 {}; r5 {}; r10 {}".format(
-                split + 1, acc,
-                metrics["r1_splits"][split],
-                metrics["r5_splits"][split],
-                metrics["r10_splits"][split],
-                )
+            print(
+                f'Top 1 accuracy on split {split + 1}: {acc}; r1 {metrics["r1_splits"][split]}; r5 {metrics["r5_splits"][split]}; r10 {metrics["r10_splits"][split]}'
             )

@@ -113,8 +113,7 @@ class KLDivergenceRerankingCriterion(FairseqCriterion):
             norm_target / self.temperature, dim=-1, dtype=torch.float32
         )
         model_dist = F.log_softmax(logits, dim=-1, dtype=torch.float32)
-        loss = -(target_dist * model_dist - target_dist * target_dist.log()).sum()
-        return loss
+        return -(target_dist * model_dist - target_dist * target_dist.log()).sum()
 
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:

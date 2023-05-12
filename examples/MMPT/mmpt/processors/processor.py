@@ -36,9 +36,7 @@ class MetaProcessor(Processor):
             "valid": config.val_path,
             "test": config.test_path,
         }
-        if config.split is not None:
-            return splits[config.split]
-        return config.train_path
+        return splits[config.split] if config.split is not None else config.train_path
 
 
 class TextProcessor(Processor):
@@ -75,9 +73,8 @@ class VideoProcessor(Processor):
         if isinstance(video_fn, tuple):
             video_fn = video_fn[0]
         assert isinstance(video_fn, str)
-        video_fn = os.path.join(self.vfeat_dir, video_fn + ".npy")
-        feat = np.load(video_fn)
-        return feat
+        video_fn = os.path.join(self.vfeat_dir, f"{video_fn}.npy")
+        return np.load(video_fn)
 
 
 class Aligner(object):

@@ -78,7 +78,7 @@ class WSCTask(LegacyFairseqTask):
 
         # load data and label dictionaries
         vocab = cls.load_dictionary(os.path.join(args.data, "dict.txt"))
-        print("| dictionary: {} types".format(len(vocab)))
+        print(f"| dictionary: {len(vocab)} types")
 
         return cls(args, vocab)
 
@@ -116,9 +116,9 @@ class WSCTask(LegacyFairseqTask):
             split (str): name of the split (e.g., train, valid, test)
         """
         if data_path is None:
-            data_path = os.path.join(self.args.data, split + ".jsonl")
+            data_path = os.path.join(self.args.data, f"{split}.jsonl")
         if not os.path.exists(data_path):
-            raise FileNotFoundError("Cannot find data: {}".format(data_path))
+            raise FileNotFoundError(f"Cannot find data: {data_path}")
 
         query_tokens = []
         query_masks = []
@@ -291,7 +291,7 @@ class WinograndeTask(WSCTask):
 
         # load data and label dictionaries
         vocab = cls.load_dictionary(os.path.join(args.data, "dict.txt"))
-        print("| dictionary: {} types".format(len(vocab)))
+        print(f"| dictionary: {len(vocab)} types")
 
         return cls(args, vocab)
 
@@ -304,7 +304,7 @@ class WinograndeTask(WSCTask):
             split (str): name of the split (e.g., train, valid, test)
         """
         if data_path is None:
-            data_path = os.path.join(self.args.data, split + ".jsonl")
+            data_path = os.path.join(self.args.data, f"{split}.jsonl")
         if not os.path.exists(data_path):
             raise FileNotFoundError("Cannot find data: {}".format(data_path))
 

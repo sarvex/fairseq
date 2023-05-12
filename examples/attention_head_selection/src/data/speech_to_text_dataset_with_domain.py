@@ -86,7 +86,7 @@ class SpeechToTextDatasetWithDomain(SpeechToTextDataset):
     def collater(
         self, samples: List[SpeechToTextDatasetItem], return_order: bool = False
     ) -> Dict:
-        if len(samples) == 0:
+        if not samples:
             return {}
         out = super().collater(samples, return_order=True)
         order = out["order"]

@@ -63,13 +63,13 @@ class MultiLingualAlignedCorpusReader(object):
             for lang in list_:
                 self.lang_set.add(lang)
 
-        self.data = dict()
+        self.data = {}
         self.data['train'] = self.read_aligned_corpus(split_type='train')
         self.data['test'] = self.read_aligned_corpus(split_type='test')
         self.data['dev'] = self.read_aligned_corpus(split_type='dev')
 
     def read_data(self, file_loc_):
-        data_list = list()
+        data_list = []
         with io.open(file_loc_, 'r', encoding='utf8') as fp:
             for line in fp:
                 try:
@@ -80,10 +80,7 @@ class MultiLingualAlignedCorpusReader(object):
         return data_list
 
     def filter_text(self, dict_):
-        if self.target_token:
-            field_index = 1
-        else:
-            field_index = 0
+        field_index = 1 if self.target_token else 0
         data_dict = defaultdict(list)
         list1 = dict_['source']
         list2 = dict_['target']
@@ -93,7 +90,7 @@ class MultiLingualAlignedCorpusReader(object):
             except IndexError:
                 src_sent = 'NULL'
 
-            if src_sent.find(self.empty_line_flag) != -1 or len(src_sent) == 0:
+            if self.empty_line_flag in src_sent or not src_sent:
                 continue
 
             elif sent2.find(self.empty_line_flag) != -1 or len(sent2) == 0:
@@ -116,11 +113,8 @@ class MultiLingualAlignedCorpusReader(object):
             de_tok(tok_file, lang)                
 
     def add_target_token(self, list_, lang_id):
-        new_list = list()
-        token = '__' + lang_id + '__'
-        for sent in list_:
-            new_list.append(token + ' ' + sent)
-        return new_list
+        token = f'__{lang_id}__'
+        return [f'{token} {sent}' for sent in list_]
 
     def read_from_single_file(self, path_, s_lang, t_lang):
         data_dict = defaultdict(list)
@@ -155,15 +149,15 @@ class MultiLingualAlignedCorpusReader(object):
             if s_lang == t_lang:
                 continue
             if self.corpus_type == 'file':
-                split_type_file_path = os.path.join(self.corpus_path,
-                                                    "all_talks_{}.tsv".format(split_type))
+                split_type_file_path = os.path.join(
+                    self.corpus_path, f"all_talks_{split_type}.tsv"
+                )
                 s_list, t_list = self.read_from_single_file(split_type_file_path,
                                                             s_lang=s_lang,
                                                             t_lang=t_lang)
             data_dict['source'] += s_list
             data_dict['target'] += t_list
-        new_data_dict = self.filter_text(data_dict)
-        return new_data_dict
+        return self.filter_text(data_dict)
 
 
 def read_langs(corpus_path):
@@ -191,8 +185,7 @@ def extra_english(corpus_path, split):
 def tok_file_name(filename, lang):
     seps = filename.split('.')
     seps.insert(-1, 'tok')
-    tok_file = '.'.join(seps)
-    return tok_file
+    return '.'.join(seps)
 
 def de_tok(tok_file, lang):
     # seps = tok_file.split('.')
@@ -220,6 +213,7 @@ def extra_bitex(
         elif lang in ['pt_BR', 'zh_CN', 'zh_TW', 'fr_CA']:
             return lang.lower().replace('_', '-')
         return lang[:2]
+
     src_lang = get_ted_lang(lsrc_lang)
     trg_lang = get_ted_lang(ltrg_lang)
     train_lang_dict={'source': [src_lang], 'target': [trg_lang]}
@@ -236,20 +230,44 @@ def extra_bitex(
     os.makedirs(output_data_path, exist_ok=True)
     lsrc_lang = lsrc_lang.replace('-', '_')
     ltrg_lang = ltrg_lang.replace('-', '_')
-    obj.save_file(output_data_path + f"/train.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
-                  split_type='train', data_type='source', lang=src_lang)
-    obj.save_file(output_data_path + f"/train.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
-                  split_type='train', data_type='target', lang=trg_lang)
+    obj.save_file(
+        f"{output_data_path}/train.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
+        split_type='train',
+        data_type='source',
+        lang=src_lang,
+    )
+    obj.save_file(
+        f"{output_data_path}/train.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
+        split_type='train',
+        data_type='target',
+        lang=trg_lang,
+    )
 
-    obj.save_file(output_data_path + f"/test.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
-                  split_type='test', data_type='source', lang=src_lang)
-    obj.save_file(output_data_path + f"/test.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
-                  split_type='test', data_type='target', lang=trg_lang)
+    obj.save_file(
+        f"{output_data_path}/test.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
+        split_type='test',
+        data_type='source',
+        lang=src_lang,
+    )
+    obj.save_file(
+        f"{output_data_path}/test.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
+        split_type='test',
+        data_type='target',
+        lang=trg_lang,
+    )
 
-    obj.save_file(output_data_path + f"/valid.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
-                  split_type='dev', data_type='source', lang=src_lang)
-    obj.save_file(output_data_path + f"/valid.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
-                  split_type='dev', data_type='target', lang=trg_lang)
+    obj.save_file(
+        f"{output_data_path}/valid.{lsrc_lang}-{ltrg_lang}.{lsrc_lang}",
+        split_type='dev',
+        data_type='source',
+        lang=src_lang,
+    )
+    obj.save_file(
+        f"{output_data_path}/valid.{lsrc_lang}-{ltrg_lang}.{ltrg_lang}",
+        split_type='dev',
+        data_type='target',
+        lang=trg_lang,
+    )
 
 
 def bar_custom(current, total, width=80):
@@ -257,14 +275,14 @@ def bar_custom(current, total, width=80):
 
 
 def download_and_extract(download_to, extract_to):
-    url = 'http://phontron.com/data/ted_talks.tar.gz'
     filename = f"{download_to}/ted_talks.tar.gz"
     if os.path.exists(filename):
         print(f'{filename} has already been downloaded so skip')
     else:
+        url = 'http://phontron.com/data/ted_talks.tar.gz'
         filename = wget.download(url, filename, bar=bar_custom)
     if os.path.exists(f'{extract_to}/all_talks_train.tsv'):
-        print(f'Already extracted so skip')
+        print('Already extracted so skip')
     else:
         extract_cmd = f'tar xzfv "{filename}" -C "{extract_to}"'
         call(extract_cmd)
@@ -300,7 +318,7 @@ if __name__ == "__main__":
 
     download_to = f'{ted_data_path}/downloads'
     extract_to = f'{ted_data_path}/extracted'
-    
+
     #DESTDIR=${WORKDIR_ROOT}/ML50/raw/
     output_path = f'{ted_data_path}/ML50/raw'
     os.makedirs(download_to, exist_ok=True)
@@ -312,7 +330,7 @@ if __name__ == "__main__":
     if args.extract_all_english:
         for split in ['train', 'dev', 'test']:
             extra_english(ted_data_path, split)
-        exit(0)     
+        exit(0)
     if args.direction_list is not None: 
         directions = args.direction_list.strip().split(',')
         directions = [tuple(d.strip().split('-', 1)) for d in directions if d]
@@ -328,7 +346,7 @@ if __name__ == "__main__":
     print(f'num directions={len(directions)}: {directions}')
 
     for src_lang, trg_lang in directions:
-        print('--working on {}-{}'.format(src_lang, trg_lang))
+        print(f'--working on {src_lang}-{trg_lang}')
         extra_bitex(
             extract_to,
             src_lang,

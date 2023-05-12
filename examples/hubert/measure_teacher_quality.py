@@ -69,7 +69,7 @@ def comp_joint_prob(uid2refs, uid2hyps):
         min_len = min(len(refs), len(hyps))
         refs = refs[:min_len]
         hyps = hyps[:min_len]
-        cnts.update(zip(refs, hyps))
+        cnts |= zip(refs, hyps)
     tot = sum(cnts.values())
 
     ref_set = sorted({ref for ref, _ in cnts.keys()})
@@ -125,14 +125,15 @@ def main_lab_lab(
 
     uid2refs = {}
     for s in lab_sets:
-        uid2refs.update(read_lab(f"{tsv_dir}/{s}.tsv", f"{ref_dir}/{s}.{ref_name}"))
+        uid2refs |= read_lab(f"{tsv_dir}/{s}.tsv", f"{ref_dir}/{s}.{ref_name}")
 
     uid2hyps = {}
     for s in lab_sets:
-        uid2hyps.update(
-            read_lab(
-                f"{tsv_dir}/{s}.tsv", f"{lab_dir}/{s}.{lab_name}", pad_len, upsample
-            )
+        uid2hyps |= read_lab(
+            f"{tsv_dir}/{s}.tsv",
+            f"{lab_dir}/{s}.{lab_name}",
+            pad_len,
+            upsample,
         )
     _main(uid2refs, uid2hyps, verbose)
 
@@ -150,15 +151,16 @@ def main_phn_lab(
 ):
     uid2refs = {}
     for s in phn_sets:
-        uid2refs.update(read_phn(f"{phn_dir}/{s}.tsv"))
+        uid2refs |= read_phn(f"{phn_dir}/{s}.tsv")
 
     uid2hyps = {}
     tsv_dir = lab_dir if tsv_dir is None else tsv_dir
     for s in lab_sets:
-        uid2hyps.update(
-            read_lab(
-                f"{tsv_dir}/{s}.tsv", f"{lab_dir}/{s}.{lab_name}", pad_len, upsample
-            )
+        uid2hyps |= read_lab(
+            f"{tsv_dir}/{s}.tsv",
+            f"{lab_dir}/{s}.{lab_name}",
+            pad_len,
+            upsample,
         )
     _main(uid2refs, uid2hyps, verbose)
 

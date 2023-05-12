@@ -140,13 +140,9 @@ class MonotonicAttention(MultiheadAttention):
             bias=self.energy_bias,
         )
 
-        p_choose = learnable_p_choose(
-            monotonic_energy,
-            self.noise_mean,
-            self.noise_var,
-            self.training
+        return learnable_p_choose(
+            monotonic_energy, self.noise_mean, self.noise_var, self.training
         )
-        return p_choose
 
     def p_choose(self, query, key, key_padding_mask, incremental_states=None):
         return self.p_choose_from_qk(self, query, key, key_padding_mask)
@@ -403,11 +399,10 @@ class MonotonicAttention(MultiheadAttention):
             incremental_state,
             'monotonic',
         )
-        if maybe_incremental_state is None:
-            typed_empty_dict: Dict[str, Optional[Tensor]] = {}
-            return typed_empty_dict
-        else:
+        if maybe_incremental_state is not None:
             return maybe_incremental_state
+        typed_empty_dict: Dict[str, Optional[Tensor]] = {}
+        return typed_empty_dict
 
     def _set_monotonic_buffer(self, incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]], buffer: Dict[str, Optional[Tensor]]):
         self.set_incremental_state(

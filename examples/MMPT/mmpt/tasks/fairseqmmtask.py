@@ -71,11 +71,14 @@ class FairseqMMTask(LegacyFairseqTask):
         update_epoch_batch_itr=False,
     ):
         random.seed(epoch)
-        if dataset.mmdataset.split == "train" and isinstance(self.mmtask, RetriTask):
-            if epoch >= self.mmtask.config.retri_epoch:
-                if not hasattr(self.mmtask, "retri_dataloader"):
-                    self.mmtask.build_dataloader()
-                self.mmtask.retrive_candidates(epoch)
+        if (
+            dataset.mmdataset.split == "train"
+            and isinstance(self.mmtask, RetriTask)
+            and epoch >= self.mmtask.config.retri_epoch
+        ):
+            if not hasattr(self.mmtask, "retri_dataloader"):
+                self.mmtask.build_dataloader()
+            self.mmtask.retrive_candidates(epoch)
 
         return super().get_batch_iterator(
             dataset,

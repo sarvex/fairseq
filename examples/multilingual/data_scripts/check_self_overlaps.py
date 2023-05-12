@@ -18,8 +18,7 @@ if WORKDIR_ROOT is None or  not WORKDIR_ROOT.strip():
 
 def get_directions(folder):
     raw_files = glob.glob(f'{folder}/train*')
-    directions = [os.path.split(file_path)[-1].split('.')[1] for file_path in raw_files] 
-    return directions   
+    return [os.path.split(file_path)[-1].split('.')[1] for file_path in raw_files]   
 
 def diff_list(lhs, rhs):
     return set(lhs).difference(set(rhs))

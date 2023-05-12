@@ -13,7 +13,7 @@ DIM = 1024
 
 
 def compute_dist(source_embs, target_embs, k=5, return_sim_mat=False):
-    target_ids = [tid for tid in target_embs]
+    target_ids = list(target_embs)
     source_mat = np.stack(source_embs.values(), axis=0)
     normalized_source_mat = source_mat / np.linalg.norm(
         source_mat, axis=1, keepdims=True

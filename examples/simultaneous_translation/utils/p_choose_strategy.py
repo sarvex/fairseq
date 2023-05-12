@@ -60,12 +60,11 @@ def waitk_p_choose(
         .long()
     )
 
-    if key_padding_mask is not None:
-        if key_padding_mask[:, 0].any():
-            # Left padding
-            activate_indices_offset += (
-                key_padding_mask.sum(dim=1, keepdim=True)
-            )
+    if key_padding_mask is not None and key_padding_mask[:, 0].any():
+        # Left padding
+        activate_indices_offset += (
+            key_padding_mask.sum(dim=1, keepdim=True)
+        )
 
     # Need to clamp the indices that are too large
     activate_indices_offset = (
@@ -120,7 +119,4 @@ def learnable_p_choose(
             .to(energy.device)
         )
 
-    p_choose = torch.sigmoid(energy + noise)
-
-    # p_choose: bsz * self.num_heads, tgt_len, src_len
-    return p_choose
+    return torch.sigmoid(energy + noise)

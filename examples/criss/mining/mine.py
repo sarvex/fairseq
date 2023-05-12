@@ -61,7 +61,7 @@ def knnGPU_sharded(x_batches_f, y_batches_f, dim, k, direction="x2y"):
             y_batch = load_batch(y_batch_f, dim)
             neighbor_size = min(k, y_batch.shape[0])
             yto = yfrom + y_batch.shape[0]
-            print("{}-{}  ->  {}-{}".format(xfrom, xto, yfrom, yto))
+            print(f"{xfrom}-{xto}  ->  {yfrom}-{yto}")
             idx = faiss.IndexFlatIP(dim)
             idx = faiss.index_cpu_to_all_gpus(idx)
             idx.add(y_batch)
@@ -110,8 +110,7 @@ def load_text(files):
     all_sentences = []
     for fi in files:
         with open(fi) as sentence_fi:
-            for line in sentence_fi:
-                all_sentences.append(line.strip())
+            all_sentences.extend(line.strip() for line in sentence_fi)
     print(f"Read {len(all_sentences)} sentences")
     return all_sentences
 
@@ -184,36 +183,35 @@ if __name__ == "__main__":
     seen_src, seen_trg = set(), set()
     directory = args.output
     call(f"mkdir -p {directory}")
-    src_out = open(
+    with open(
         f"{directory}/all.{args.src_lang}",
         mode="w",
         encoding="utf-8",
         errors="surrogateescape",
-    )
-    tgt_out = open(
-        f"{directory}/all.{args.tgt_lang}",
-        mode="w",
-        encoding="utf-8",
-        errors="surrogateescape",
-    )
-    scores_out = open(
-        f"{directory}/all.scores", mode="w", encoding="utf-8", errors="surrogateescape"
-    )
-    count = 0
-    for i in np.argsort(-scores):
-        src_ind, trg_ind = indices[i]
-        if src_ind not in seen_src and trg_ind not in seen_trg:
-            seen_src.add(src_ind)
-            seen_trg.add(trg_ind)
-            if scores[i] > threshold or count < min_count:
-                if x_sentences[src_ind]:
-                    print(scores[i], file=scores_out)
-                    print(x_sentences[src_ind], file=src_out)
-                    print(y_sentences[trg_ind], file=tgt_out)
-                    count += 1
-                else:
-                    print(f"Ignoring sentence: {x_sentences[src_ind]}")
-    src_out.close()
+    ) as src_out:
+        tgt_out = open(
+            f"{directory}/all.{args.tgt_lang}",
+            mode="w",
+            encoding="utf-8",
+            errors="surrogateescape",
+        )
+        scores_out = open(
+            f"{directory}/all.scores", mode="w", encoding="utf-8", errors="surrogateescape"
+        )
+        count = 0
+        for i in np.argsort(-scores):
+            src_ind, trg_ind = indices[i]
+            if src_ind not in seen_src and trg_ind not in seen_trg:
+                seen_src.add(src_ind)
+                seen_trg.add(trg_ind)
+                if scores[i] > threshold or count < min_count:
+                    if x_sentences[src_ind]:
+                        print(scores[i], file=scores_out)
+                        print(x_sentences[src_ind], file=src_out)
+                        print(y_sentences[trg_ind], file=tgt_out)
+                        count += 1
+                    else:
+                        print(f"Ignoring sentence: {x_sentences[src_ind]}")
     tgt_out.close()
     scores_out.close()
 

@@ -63,7 +63,7 @@ class MMBertForJoint(BertPreTrainedModel):
         )
         video_tokens = self.videomlp(input_video_embeds)
 
-        outputs = self.bert(
+        return self.bert(
             input_ids,
             video_tokens,
             attention_mask=attention_mask,
@@ -76,8 +76,6 @@ class MMBertForJoint(BertPreTrainedModel):
             return_dict=return_dict,
             separate_forward_split=separate_forward_split,
         )
-
-        return outputs
 
 
 class MMBertForTokenClassification(BertPreTrainedModel):
@@ -163,7 +161,7 @@ class MMBertForEncoder(BertPreTrainedModel):
         else:
             video_tokens = None
 
-        outputs = self.bert(
+        return self.bert(
             input_ids,
             video_tokens,
             attention_mask=attention_mask,
@@ -175,7 +173,6 @@ class MMBertForEncoder(BertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        return outputs
 
 
 class MMBertForMFMMLM(BertPreTrainedModel):
@@ -238,12 +235,12 @@ class MMBertForMFMMLM(BertPreTrainedModel):
             return_dict=return_dict,
         )
 
-        sequence_output = outputs[0]
-
         mfm_scores, prediction_scores = None, None
         if masked_frame_labels is not None and masked_lm_labels is not None:
             # split the sequence.
             text_offset = masked_frame_labels.size(1) + 1  # [CLS]
+            sequence_output = outputs[0]
+
             video_sequence_output = sequence_output[
                 :, 1:text_offset
             ]  # remove [SEP] as not in video_label.
@@ -272,11 +269,10 @@ class MMBertForMFMMLM(BertPreTrainedModel):
                 selected_text_output,
             )
 
-        output = (
+        return (
             mfm_scores,
             prediction_scores,
         ) + outputs
-        return output
 
 
 class BertMFMMLMPredictionHead(nn.Module):
@@ -497,7 +493,7 @@ class MMBertModel(BertModel):
                 "You have to specify either input_ids or inputs_embeds")
 
         device = input_ids.device if input_ids is not None \
-            else inputs_embeds.device
+                else inputs_embeds.device
 
         if attention_mask is None:
             attention_mask = torch.ones(input_shape, device=device)
@@ -510,7 +506,7 @@ class MMBertModel(BertModel):
         # ourselves in which case
         # we just need to make it broadcastable to all heads.
         extended_attention_mask: torch.Tensor = \
-            self.get_extended_attention_mask(
+                self.get_extended_attention_mask(
                 attention_mask, input_shape, device)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
@@ -554,7 +550,7 @@ class MMBertModel(BertModel):
 
         if separate_forward_split is not None:
             split_embedding_output = \
-                embedding_output[:, :separate_forward_split]
+                    embedding_output[:, :separate_forward_split]
             split_extended_attention_mask = extended_attention_mask[
                 :, :, :, :separate_forward_split, :separate_forward_split
             ]
@@ -571,15 +567,14 @@ class MMBertModel(BertModel):
             assert (
                 len(split_encoder_outputs) <= 2
             ), "we do not support merge on attention for now."
-            encoder_outputs = []
-            encoder_outputs.append([split_encoder_outputs[0]])
+            encoder_outputs = [[split_encoder_outputs[0]]]
             if len(split_encoder_outputs) == 2:
                 encoder_outputs.append([])
                 for _all_hidden_states in split_encoder_outputs[1]:
                     encoder_outputs[-1].append([_all_hidden_states])
 
             split_embedding_output = \
-                embedding_output[:, separate_forward_split:]
+                    embedding_output[:, separate_forward_split:]
             split_extended_attention_mask = extended_attention_mask[
                 :, :, :, separate_forward_split:, separate_forward_split:
             ]
@@ -649,22 +644,17 @@ class MMBertModel(BertModel):
             :obj:`torch.Tensor` The extended attention mask, \
                 with a the same dtype as :obj:`attention_mask.dtype`.
         """
-        # We can provide a self-attention mask of dimensions
-        # [batch_size, from_seq_length, to_seq_length]
-        # ourselves in which case we just need to make it broadcastable
-        # to all heads.
-        if attention_mask.dim() == 4:
-            extended_attention_mask = attention_mask[:, :, None, :, :]
-            extended_attention_mask = extended_attention_mask.to(
-                dtype=self.dtype
-            )  # fp16 compatibility
-            extended_attention_mask = (1.0 - extended_attention_mask) \
-                * -10000.0
-            return extended_attention_mask
-        else:
+        if attention_mask.dim() != 4:
             return super().get_extended_attention_mask(
                 attention_mask, input_shape, device
             )
+        extended_attention_mask = attention_mask[:, :, None, :, :]
+        extended_attention_mask = extended_attention_mask.to(
+            dtype=self.dtype
+        )  # fp16 compatibility
+        extended_attention_mask = (1.0 - extended_attention_mask) \
+                * -10000.0
+        return extended_attention_mask
 
 
 class MultiLayerAttentionMaskBertEncoder(BertEncoder):

@@ -48,9 +48,14 @@ class VideoLoader(Dataset):
 
     def _get_video_info(self, video_path):
         probe = ffmpeg.probe(video_path)
-        video_stream = next((stream for stream in probe['streams']
-                             if stream['codec_type'] == 'video'), None)
-        return video_stream
+        return next(
+            (
+                stream
+                for stream in probe['streams']
+                if stream['codec_type'] == 'video'
+            ),
+            None,
+        )
 
     def _get_output_dim(self, h, w):
         if isinstance(self.size, tuple) and len(self.size) == 2:
@@ -70,7 +75,7 @@ class VideoLoader(Dataset):
             try:
                 h, w = self._get_video_dim(video_path)
             except Exception:
-                print('ffprobe failed at: {}'.format(video_path))
+                print(f'ffprobe failed at: {video_path}')
                 return {'video': th.zeros(1), 'input': video_path,
                         'output': output_file}
             try:
@@ -147,8 +152,7 @@ class VideoCompressor(VideoLoader):
             cmd.output(filename=output_file, crf=self.crf)
             .run(quiet=True)
         )
-        video = None
-        return video
+        return None
 
 
 class VideoDownloader(VideoCompressor):
@@ -209,7 +213,7 @@ class AvKeyframeVideoCompressor(VideoLoader):
             try:
                 h, w = self._get_video_dim(video_path)
             except Exception:
-                print('probe failed at: {}'.format(video_path))
+                print(f'probe failed at: {video_path}')
                 return {'video': th.zeros(1), 'input': video_path,
                         'output': output_file}
 
@@ -223,9 +227,7 @@ class AvKeyframeVideoCompressor(VideoLoader):
                     container.streams.video[0].codec_context.width = width
                     if self.framerate == 0:     # keyframe.
                         container.streams.video[0].codec_context.skip_frame = 'NONKEY'
-                    frames = []
-                    for frame in container.decode(video=0):
-                        frames.append(frame)
+                    frames = list(container.decode(video=0))
                     frames = random.sample(frames, self.max_num_frames)
 
                     os.makedirs(output_file, exist_ok=True)
@@ -235,7 +237,7 @@ class AvKeyframeVideoCompressor(VideoLoader):
                                 output_file,
                                 "%04d.jpg" % frame.index))
             except Exception:
-                print('extract failed at: {}'.format(video_path))
+                print(f'extract failed at: {video_path}')
                 return {'video': th.zeros(1), 'input': video_path,
                         'output': output_file}
         video = th.zeros(1)

@@ -25,13 +25,13 @@ def write_version_py():
             .decode("ascii")
             .strip()
         )
-        version += "+" + sha[:7]
+        version += f"+{sha[:7]}"
     except Exception:
         pass
 
     # write version info to fairseq/version.py
     with open(os.path.join("fairseq", "version.py"), "w") as f:
-        f.write('__version__ = "{}"\n'.format(version))
+        f.write(f'__version__ = "{version}"\n')
     return version
 
 
@@ -259,10 +259,11 @@ def get_files(path, relative_to="fairseq"):
     all_files = []
     for root, _dirs, files in os.walk(path, followlinks=True):
         root = os.path.relpath(root, relative_to)
-        for file in files:
-            if file.endswith(".pyc"):
-                continue
-            all_files.append(os.path.join(root, file))
+        all_files.extend(
+            os.path.join(root, file)
+            for file in files
+            if not file.endswith(".pyc")
+        )
     return all_files
 
 

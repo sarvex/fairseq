@@ -78,8 +78,7 @@ class RetriTask(Task):
         os.makedirs(out_dir, exist_ok=True)
 
         if not os.path.isfile(
-                os.path.join(
-                    out_dir, "batched_e" + str(epoch) + "_videos0.pkl")
+            os.path.join(out_dir, f"batched_e{str(epoch)}_videos0.pkl")
         ):
             if dataloader is None:
                 dataloader = self.retri_dataloader
@@ -88,7 +87,7 @@ class RetriTask(Task):
             self.model.is_train = False
 
             assert self.retri_data.meta_processor.data == \
-                self.train_data.meta_processor.data  # video_ids not mutated.
+                    self.train_data.meta_processor.data  # video_ids not mutated.
 
             self._retri_predict(epoch, dataloader)
 
@@ -141,8 +140,8 @@ class VideoRetriTask(RetriTask):
         batched_videos = []
         for local_rank in range(get_world_size()):
             fn = os.path.join(
-                out_dir,
-                "batched_e" + str(epoch) + "_videos" + str(local_rank) + ".pkl")
+                out_dir, f"batched_e{str(epoch)}_videos{str(local_rank)}.pkl"
+            )
             with open(fn, "rb") as fr:
                 batched_videos.extend(pickle.load(fr))
         print(
@@ -247,7 +246,8 @@ class VideoRetriPredictor(Predictor):
     def finalize(self, batched_videos, epoch):
         fn = os.path.join(
             self.pred_dir,
-            "batched_e" + str(epoch) + "_videos" + str(get_local_rank()) + ".pkl")
+            f"batched_e{str(epoch)}_videos{str(get_local_rank())}.pkl",
+        )
         with open(fn, "wb") as fw:
             pickle.dump(batched_videos, fw, pickle.HIGHEST_PROTOCOL)
         return batched_videos

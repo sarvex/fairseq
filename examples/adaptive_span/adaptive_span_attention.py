@@ -134,9 +134,8 @@ class AdaptiveSpan(nn.Module):
             # after a lot of updates.
             key = F.pad(key, [0, 0, -trim_len_cache, 0])
             value = F.pad(value, [0, 0, -trim_len_cache, 0])
-        if trim_len > 0:
-            if key_pe is not None:
-                key_pe = key_pe[:, :, trim_len:]
+        if trim_len > 0 and key_pe is not None:
+            key_pe = key_pe[:, :, trim_len:]
         return key, value, key_pe
 
     def get_cache_size(self):

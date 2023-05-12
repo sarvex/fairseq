@@ -21,11 +21,11 @@ def set_seed(seed=43211):
 
 
 def get_world_size():
-    if torch.distributed.is_initialized():
-        world_size = torch.distributed.get_world_size()
-    else:
-        world_size = 1
-    return world_size
+    return (
+        torch.distributed.get_world_size()
+        if torch.distributed.is_initialized()
+        else 1
+    )
 
 
 def get_local_rank():
@@ -64,5 +64,4 @@ class RetriMeter(object):
             print("[INFO]", self)
 
     def __repr__(self):
-        return "RetriMeter (" + str(self.replace / self.total) \
-            + "/" + str(self.replace) + "/" + str(self.total) + ")"
+        return f"RetriMeter ({str(self.replace / self.total)}/{str(self.replace)}/{str(self.total)})"

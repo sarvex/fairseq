@@ -36,11 +36,11 @@ class ShardedTensor(object):
         return self.starts[1:] - self.starts[:-1]
 
     def save(self, path):
-        np.save(path + "_starts", self.starts)
-        np.save(path + "_data", self.data)
+        np.save(f"{path}_starts", self.starts)
+        np.save(f"{path}_data", self.data)
 
     @staticmethod
     def load(path, mmap_mode=None):
-        starts = np.load(path + "_starts.npy", mmap_mode)
-        data = np.load(path + "_data.npy", mmap_mode)
+        starts = np.load(f"{path}_starts.npy", mmap_mode)
+        data = np.load(f"{path}_data.npy", mmap_mode)
         return ShardedTensor(data, starts)

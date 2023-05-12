@@ -16,9 +16,7 @@ def load_config(args=None, config_file=None, overwrite_fairseq=False):
     if config.dataset.subsampling is not None:
         batch_size = config.fairseq.dataset.batch_size // config.dataset.subsampling
         print(
-            "adjusting batch_size to {} due to subsampling {}.".format(
-                batch_size, config.dataset.subsampling
-            )
+            f"adjusting batch_size to {batch_size} due to subsampling {config.dataset.subsampling}."
         )
         config.fairseq.dataset.batch_size = batch_size
 
@@ -47,7 +45,7 @@ def load_config(args=None, config_file=None, overwrite_fairseq=False):
         # flatten fields.
         for group in config.fairseq:
             for field in config.fairseq[group]:
-                print("overwrite args." + field, "as", config.fairseq[group][field])
+                print(f"overwrite args.{field}", "as", config.fairseq[group][field])
                 setattr(args, field, config.fairseq[group][field])
     return config
 
@@ -70,7 +68,7 @@ def suffix_rundir(save_dir, run_dir):
             splits = search_dir.split("_")
             cur_id = int(splits[1]) if len(splits) > 1 else 0
             max_id = max(max_id, cur_id)
-    return os.path.join(save_dir, run_dir + "_" + str(max_id + 1))
+    return os.path.join(save_dir, f"{run_dir}_{str(max_id + 1)}")
 
 
 def overwrite_dir(config, replace, basedir):
